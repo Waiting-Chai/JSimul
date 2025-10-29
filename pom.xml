@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
 
     <name>JSimul</name>
-    <description>JSimul </description>
+    <description>JSimul</description>
 
     <properties>
         <java.version>21</java.version>
@@ -20,7 +20,6 @@
         <!-- 统一版本管理 -->
         <spring.boot.version>3.3.4</spring.boot.version>
         <mybatis.plus.version>3.5.5</mybatis.plus.version>
-        <mysql.version>9.1.0</mysql.version>
     </properties>
 
     <!-- 依赖版本由顶层统一管理 -->
@@ -41,17 +40,13 @@
                 <artifactId>mybatis-plus-boot-starter</artifactId>
                 <version>${mybatis.plus.version}</version>
             </dependency>
-            <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-j</artifactId>
-                <version>${mysql.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <modules>
         <module>basic</module>
         <module>plat</module>
+        <module>sim</module>
     </modules>
 
     <!-- 统一插件版本与基础编译配置 -->

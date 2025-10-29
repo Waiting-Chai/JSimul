@@ -1,0 +1,62 @@
+@startuml
+title SimPy(Java) 类关系与事件调用流程
+
+package core {
+  class Environment {
+    +now(): double
+    +schedule(Event, int, double)
+    +step()
+    +run(Object)
+  }
+  class Event {
+    +ok: boolean
+    +value: Object
+    +addCallback(Callback)
+    +succeed(Object)
+    +fail(Throwable)
+  }
+  class Timeout extends Event
+  class Condition extends Event
+  class AllOf extends Condition
+  class AnyOf extends Condition
+  class Process extends Event
+  class Interrupt
+}
+
+package resources {
+  class BaseResource {
+    +put()
+    +get()
+    +triggerPut(Event)
+    +triggerGet(Event)
+  }
+  class Resource extends BaseResource
+  class Store extends BaseResource
+  class PriorityStore extends Store
+  class FilterStore extends Store
+  class Container extends BaseResource
+}
+
+Environment --> Event : schedules
+Event ..> Environment : env
+Condition --> Event : observes
+Process --> Event : await(Event)
+Resource --> BaseResource : extends
+Store --> BaseResource : extends
+PriorityStore --> Store : extends
+FilterStore --> Store : extends
+Container --> BaseResource : extends
+
+== 事件调用流程 ==
+participant Env as "Environment"
+participant E as "Event"
+participant P as "Process"
+
+Env -> E : schedule(time, priority)
+Env -> Env : step()
+Env -> E : dispatch callbacks
+P -> E : await()
+E -> P : callback completes (value/exception)
+P -> Env : on completion, schedule Process event
+
+@enduml
