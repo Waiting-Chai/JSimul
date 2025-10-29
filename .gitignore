@@ -102,3 +102,5 @@ Desktop.ini
 *.lcov
 coverage/
 *.nyc_output
+/.idea/
+/.vscode/
