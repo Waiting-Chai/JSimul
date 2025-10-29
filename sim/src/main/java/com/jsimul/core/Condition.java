@@ -5,77 +5,96 @@ import java.util.List;
 import java.util.function.BiPredicate;
 
 /**
- * Condition event triggered when evaluate(events,count) returns true.
- * 
+ * Condition event triggered when evaluate(events,count) returns true (compositional form).
+ *
  * @author waiting
  * @date 2025/10/29
  */
-public class Condition extends Event {
-  public static boolean allEvents(List<Event> events, int count) { return events.size() == count; }
+public class Condition implements SimEvent {
 
-  public static boolean anyEvents(List<Event> events, int count) {
-    return count > 0 || events.isEmpty();
-  }
-
-  private final BiPredicate<List<Event>, Integer> evaluate;
-  private final List<Event> events;
-  private int count;
-
-  public Condition(Environment env, BiPredicate<List<Event>, Integer> evaluate, List<Event> events) {
-    super(env);
-    this.evaluate = evaluate;
-    this.events = new ArrayList<>(events);
-
-    if (this.events.isEmpty()) {
-      succeed(new ConditionValue());
-      return;
+    public static boolean allEvents(List<Event> events, int count) {
+        return events.size() == count;
     }
 
-    for (Event e : this.events) {
-      if (e.env() != env) {
-        throw new IllegalArgumentException("Cannot mix events from different environments");
-      }
+    public static boolean anyEvents(List<Event> events, int count) {
+        return count > 0 || events.isEmpty();
     }
 
-    for (Event e : this.events) {
-      if (e.isProcessed()) {
-        check(e);
-      } else {
-        e.addCallback(this::check);
-      }
+    private final Event inner;
+
+    private final BiPredicate<List<Event>, Integer> evaluate;
+
+    private final List<Event> events;
+
+    private int count;
+
+    public Condition(Environment env, BiPredicate<List<Event>, Integer> evaluate, List<?> events) {
+        this.inner = new Event(env);
+        this.evaluate = evaluate;
+        this.events = normalize(events);
+
+        if (this.events.isEmpty()) {
+            inner.succeed(new ConditionValue());
+            return;
+        }
+
+        for (Event e : this.events) {
+            if (e.env() != env) {
+                throw new IllegalArgumentException("Cannot mix events from different environments");
+            }
+        }
+
+        for (Event e : this.events) {
+            if (e.isProcessed()) {
+                check(e);
+            } else {
+                e.addCallback(this::check);
+            }
+        }
+
+        this.inner.addCallback(this::buildValue);
     }
 
-    this.addCallback(this::buildValue);
-  }
+    private static List<Event> normalize(List<?> input) {
+        List<Event> out = new ArrayList<>();
+        for (Object o : input) {
+            if (o instanceof Event) out.add((Event) o);
+            else if (o instanceof SimEvent) out.add(((SimEvent) o).asEvent());
+            else throw new IllegalArgumentException("Unsupported event type: " + o);
+        }
+        return out;
+    }
 
-  private void populateValue(ConditionValue cv) {
-    for (Event e : events) {
-      if (e instanceof Condition) {
-        ((Condition) e).populateValue(cv);
-      } else if (e.isProcessed()) {
-        cv.add(e);
-      }
+    private void populateValue(ConditionValue cv) {
+        for (Event e : events) {
+            if (e.isProcessed()) cv.add(e);
+        }
     }
-  }
 
-  private void buildValue(Event event) {
-    if (event.ok()) {
-      ConditionValue cv = new ConditionValue();
-      populateValue(cv);
-      this.value = cv;
+    private void buildValue(Event event) {
+        if (event.ok()) {
+            ConditionValue cv = new ConditionValue();
+            populateValue(cv);
+            inner.markOk(cv);
+        }
     }
-  }
 
-  private void check(Event e) {
-    if (this.value != PENDING) return;
-    this.count += 1;
-    if (!e.ok()) {
-      e.setDefused(true);
-      fail((Throwable) e.value());
-      return;
+    private void check(Event e) {
+        if (!inner.triggered()) return;
+        this.count += 1;
+        if (!e.ok()) {
+            e.setDefused(true);
+            inner.fail((Throwable) e.value());
+            return;
+        }
+        if (evaluate.test(events, count)) {
+            inner.succeed(null);
+        }
     }
-    if (evaluate.test(events, count)) {
-      succeed(null);
+
+    @Override
+    public Event asEvent() {
+        return inner;
     }
-  }
+
 }

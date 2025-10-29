@@ -1,38 +1,50 @@
 package com.jsimul.collections;
 
 import com.jsimul.core.Environment;
-import com.jsimul.core.Event;
 
 import java.util.PriorityQueue;
 
 /**
- * Store that maintains items in priority order (min-heap).
- * 
+ * Store that maintains items in priority order (min-heap) using composition.
+ *
  * @author waiting
  * @date 2025/10/29
  */
-public class PriorityStore extends Store {
-  private final PriorityQueue<Object> heap = new PriorityQueue<>();
+public class PriorityStore {
 
-  public PriorityStore(Environment env, int capacity) { super(env, capacity); }
+    private final BaseResource core;
 
-  @Override
-  protected boolean doPut(Event event) {
-    StorePut put = (StorePut) event;
-    if (heap.size() < capacity) {
-      heap.add(put.item);
-      put.succeed(null);
+    private final PriorityQueue<Object> heap = new PriorityQueue<>();
+
+    public PriorityStore(Environment env, int capacity) {
+        this.core = new BaseResource(
+                env,
+                capacity,
+                (event, res) -> {
+                    StorePut put = (StorePut) event;
+                    if (heap.size() < res.capacity) {
+                        heap.add(put.item);
+                        put.asEvent().succeed(null);
+                    }
+                    return true;
+                },
+                (event, res) -> {
+                    StoreGet get = (StoreGet) event;
+                    if (!heap.isEmpty()) {
+                        Object v = heap.poll();
+                        get.asEvent().succeed(v);
+                    }
+                    return true;
+                }
+        );
     }
-    return true;
-  }
 
-  @Override
-  protected boolean doGet(Event event) {
-    StoreGet get = (StoreGet) event;
-    if (!heap.isEmpty()) {
-      Object v = heap.poll();
-      get.succeed(v);
+    public StorePut put(Object item) {
+        return new StorePut(core, item);
     }
-    return true;
-  }
+
+    public StoreGet get() {
+        return new StoreGet(core);
+    }
+
 }

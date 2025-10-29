@@ -9,99 +9,131 @@ import java.util.List;
  *
  * <p>Events are bound to an Environment, can be triggered successfully or with failure, and
  * invoke registered callbacks when processed by the environment.
- * 
+ *
  * @author waiting
  * @date 2025/10/29
  */
 public class Event {
-  public static final Object PENDING = new Object();
-  public static final int URGENT = 0;
-  public static final int NORMAL = 1;
+    public static final Object PENDING = new Object();
 
-  /** Simple callback interface. */
-  public interface Callback {
-    void call(Event event);
-  }
+    public static final int URGENT = 0;
 
-  protected final Environment env;
-  protected List<Callback> callbacks = new ArrayList<>();
-  protected Object value = PENDING;
-  protected boolean ok;
-  protected boolean defused;
+    public static final int NORMAL = 1;
 
-  public Event(Environment env) {
-    this.env = env;
-  }
+    /**
+     * Simple callback interface.
+     */
+    public interface Callback {
+        void call(Event event);
+    }
 
-  public Environment env() { return env; }
+    protected final Environment env;
 
-  public String toString() { return getClass().getSimpleName() + "()"; }
+    protected List<Callback> callbacks = new ArrayList<>();
 
-  public boolean triggered() { return value == PENDING; }
+    protected Object value = PENDING;
 
-  public boolean isProcessed() { return callbacks == null; }
+    protected boolean ok;
 
-  public boolean ok() { return ok; }
+    protected boolean defused;
 
-  public boolean isDefused() { return defused; }
+    public Event(Environment env) {
+        this.env = env;
+    }
 
-  public void setDefused(boolean v) { this.defused = v; }
+    public Environment env() {
+        return env;
+    }
 
-  public Object value() {
-    if (value == PENDING) throw new IllegalStateException("Event value not yet available");
-    return value;
-  }
+    public String toString() {
+        return getClass().getSimpleName() + "()";
+    }
 
-  public void addCallback(Callback cb) {
-    if (callbacks != null) callbacks.add(cb);
-  }
+    public boolean triggered() {
+        return value == PENDING;
+    }
 
-  /** Detach current callbacks for processing; set callbacks to null. */
-  List<Callback> detachCallbacks() {
-    List<Callback> cbs = callbacks;
-    callbacks = null;
-    return cbs == null ? Collections.emptyList() : cbs;
-  }
+    public boolean isProcessed() {
+        return callbacks == null;
+    }
 
-  /** Trigger with another event's state and value. */
-  public Event trigger(Event other) {
-    this.ok = other.ok;
-    this.value = other.value;
-    env.schedule(this, NORMAL, 0);
-    return this;
-  }
+    public boolean ok() {
+        return ok;
+    }
 
-  /** Succeed with value. */
-  public Event succeed(Object v) {
-    if (value != PENDING) throw new RuntimeException(this + " has already been triggered");
-    this.ok = true;
-    this.value = v;
-    env.schedule(this, NORMAL, 0);
-    return this;
-  }
+    public boolean isDefused() {
+        return defused;
+    }
 
-  /** Mark OK with value without scheduling (internal use). */
-  Event markOk(Object v) {
-    this.ok = true;
-    this.value = v;
-    return this;
-  }
+    public void setDefused(boolean v) {
+        this.defused = v;
+    }
 
-  /** Fail with exception. */
-  public Event fail(Throwable ex) {
-    if (value != PENDING) throw new RuntimeException(this + " has already been triggered");
-    if (ex == null) throw new IllegalArgumentException("not an exception");
-    this.ok = false;
-    this.value = ex;
-    env.schedule(this, NORMAL, 0);
-    return this;
-  }
+    public Object value() {
+        if (value == PENDING) throw new IllegalStateException("Event value not yet available");
+        return value;
+    }
 
-  RuntimeException failureAsRuntime() {
-    Throwable t = (Throwable) value;
-    RuntimeException rt =
-        (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t.getMessage(), t);
-    rt.initCause(t);
-    return rt;
-  }
+    public void addCallback(Callback cb) {
+        if (callbacks != null) callbacks.add(cb);
+    }
+
+    /**
+     * Detach current callbacks for processing; set callbacks to null.
+     */
+    List<Callback> detachCallbacks() {
+        List<Callback> cbs = callbacks;
+        callbacks = null;
+        return cbs == null ? Collections.emptyList() : cbs;
+    }
+
+    /**
+     * Trigger with another event's state and value.
+     */
+    public Event trigger(Event other) {
+        this.ok = other.ok;
+        this.value = other.value;
+        env.schedule(this, NORMAL, 0);
+        return this;
+    }
+
+    /**
+     * Succeed with value.
+     */
+    public Event succeed(Object v) {
+        if (value != PENDING) throw new RuntimeException(this + " has already been triggered");
+        this.ok = true;
+        this.value = v;
+        env.schedule(this, NORMAL, 0);
+        return this;
+    }
+
+    /**
+     * Mark OK with value without scheduling (internal use).
+     */
+    Event markOk(Object v) {
+        this.ok = true;
+        this.value = v;
+        return this;
+    }
+
+    /**
+     * Fail with exception.
+     */
+    public Event fail(Throwable ex) {
+        if (value != PENDING) throw new RuntimeException(this + " has already been triggered");
+        if (ex == null) throw new IllegalArgumentException("not an exception");
+        this.ok = false;
+        this.value = ex;
+        env.schedule(this, NORMAL, 0);
+        return this;
+    }
+
+    RuntimeException failureAsRuntime() {
+        Throwable t = (Throwable) value;
+        RuntimeException rt =
+                (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t.getMessage(), t);
+        rt.initCause(t);
+        return rt;
+    }
 }

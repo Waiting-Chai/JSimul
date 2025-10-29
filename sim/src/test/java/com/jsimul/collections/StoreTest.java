@@ -20,12 +20,12 @@ public class StoreTest {
     s.put("b");
     env.step();
     env.step();
-    Store.StoreGet g1 = (Store.StoreGet) s.get();
+    StoreGet g1 = s.get();
     env.step();
-    assertEquals("a", g1.value());
-    Store.StoreGet g2 = (Store.StoreGet) s.get();
+    assertEquals("a", g1.asEvent().value());
+    StoreGet g2 = s.get();
     env.step();
-    assertEquals("b", g2.value());
+    assertEquals("b", g2.asEvent().value());
   }
 
   @Test
@@ -36,8 +36,8 @@ public class StoreTest {
     fs.put(42);
     env.step();
     env.step();
-    FilterStore.FilterStoreGet g = (FilterStore.FilterStoreGet) fs.get(o -> o instanceof Integer);
+    FilterStoreGet g = fs.get(o -> o instanceof Integer);
     env.step();
-    assertEquals(42, g.value());
+    assertEquals(42, g.asEvent().value());
   }
 }

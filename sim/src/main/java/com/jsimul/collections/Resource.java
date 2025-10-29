@@ -2,59 +2,55 @@ package com.jsimul.collections;
 
 import com.jsimul.core.Environment;
 import com.jsimul.core.Event;
+import com.jsimul.core.SimEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Simple capacity-based Resource supporting request/release semantics.
- * 
+ *
  * @author waiting
  * @date 2025/10/29
  */
-public class Resource extends BaseResource {
-  public Resource(Environment env, int capacity) {
-    super(env, capacity);
-    if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
-  }
+public class Resource {
 
-  public final List<Event> users = new ArrayList<>();
+    private final BaseResource core;
 
-  public int count() { return users.size(); }
+    public final List<SimEvent> users = new ArrayList<>();
 
-  public Event request() { return new Request(this); }
-
-  public Event release(Request req) { return new Release(this, req); }
-
-  @Override
-  protected boolean doPut(Event event) {
-    Request req = (Request) event;
-    if (users.size() < capacity) {
-      users.add(req);
-      req.succeed(null);
+    public Resource(Environment env, int capacity) {
+        if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
+        this.core = new BaseResource(
+                env,
+                capacity,
+                (event, res) -> {
+                    Request req = (Request) event;
+                    if (users.size() < capacity) {
+                        users.add(req);
+                        req.asEvent().succeed(null);
+                    }
+                    return true;
+                },
+                (event, res) -> {
+                    Release rel = (Release) event;
+                    users.remove(rel.request);
+                    rel.asEvent().succeed(null);
+                    return true;
+                }
+        );
     }
-    return true;
-  }
 
-  @Override
-  protected boolean doGet(Event event) {
-    Release rel = (Release) event;
-    users.remove(rel.request);
-    rel.succeed(null);
-    return true;
-  }
-
-  /** Request event. */
-  public static class Request extends BaseResource.Put {
-    public Request(Resource resource) { super(resource); }
-  }
-
-  /** Release event. */
-  public static class Release extends BaseResource.Get {
-    final Request request;
-    public Release(Resource resource, Request request) {
-      super(resource);
-      this.request = request;
+    public int count() {
+        return users.size();
     }
-  }
+
+    public Request request() {
+        return new Request(core);
+    }
+
+    public Release release(Request req) {
+        return new Release(core, req);
+    }
+
 }

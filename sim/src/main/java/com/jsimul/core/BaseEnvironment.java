@@ -2,18 +2,20 @@ package com.jsimul.core;
 
 /**
  * Base interface for environments, mirroring SimPy's BaseEnvironment.
- * 
+ *
  * @author waiting
  * @date 2025/10/29
  */
 public interface BaseEnvironment {
-  double now();
 
-  Process activeProcess();
+    double now();
 
-  void schedule(Event event, int priority, double delay);
+    Process activeProcess();
 
-  void step();
+    void schedule(Event event, int priority, double delay);
 
-  Object run(Object until);
+    void step();
+
+    Object run(Object until);
+
 }

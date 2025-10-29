@@ -3,43 +3,66 @@ package com.jsimul.collections;
 import com.jsimul.core.Environment;
 import com.jsimul.core.Event;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
  * Store supporting filtered get requests.
- * 
+ *
  * @author waiting
  * @date 2025/10/29
  */
-public class FilterStore extends Store {
-  public FilterStore(Environment env, int capacity) {
-    super(env, capacity);
-  }
+public class FilterStore {
 
-  public Event get(Predicate<Object> filter) { return new FilterStoreGet(this, filter); }
+    private final BaseResource core;
 
-  @Override
-  protected boolean doGet(Event event) {
-    if (event instanceof FilterStoreGet) {
-      FilterStoreGet get = (FilterStoreGet) event;
-      for (int i = 0; i < items.size(); i++) {
-        Object item = items.get(i);
-        if (get.filter.test(item)) {
-          items.remove(i);
-          get.succeed(item);
-          break;
-        }
-      }
-      return true;
+    protected final List<Object> items = new ArrayList<>();
+
+    public FilterStore(Environment env, int capacity) {
+        this.core = new BaseResource(
+                env,
+                capacity,
+                (event, res) -> {
+                    StorePut put = (StorePut) event;
+                    if (items.size() < capacity) {
+                        items.add(put.item);
+                        put.asEvent().succeed(null);
+                    }
+                    return true;
+                },
+                (event, res) -> {
+                    if (event instanceof FilterStoreGet get) {
+                        for (int i = 0; i < items.size(); i++) {
+                            Object item = items.get(i);
+                            if (get.filter.test(item)) {
+                                items.remove(i);
+                                get.asEvent().succeed(item);
+                                break;
+                            }
+                        }
+                        return true;
+                    }
+                    StoreGet get = (StoreGet) event;
+                    if (!items.isEmpty()) {
+                        Object v = items.remove(0);
+                        get.asEvent().succeed(v);
+                    }
+                    return true;
+                }
+        );
     }
-    return super.doGet(event);
-  }
 
-  public static class FilterStoreGet extends BaseResource.Get {
-    final Predicate<Object> filter;
-    public FilterStoreGet(FilterStore store, Predicate<Object> filter) {
-      super(store);
-      this.filter = filter;
+    public StorePut put(Object item) {
+        return new StorePut(core, item);
     }
-  }
+
+    public StoreGet get() {
+        return new StoreGet(core);
+    }
+
+    public FilterStoreGet get(Predicate<Object> filter) {
+        return new FilterStoreGet(core, filter);
+    }
+
 }

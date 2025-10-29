@@ -1,63 +1,55 @@
 package com.jsimul.collections;
 
-import com.jsimul.core.Event;
 import com.jsimul.core.Environment;
 
 /**
  * Container for continuous or discrete matter up to capacity, supporting put/get of quantities.
- * 
+ *
  * @author waiting
  * @date 2025/10/29
  */
-public class Container extends BaseResource {
-  private double level;
+public class Container {
 
-  public Container(Environment env, double capacity, double initial) {
-    super(env, (int) Math.ceil(capacity));
-    if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
-    if (initial < 0 || initial > capacity) throw new IllegalArgumentException("invalid initial");
-    this.level = initial;
-  }
+    private final BaseResource core;
 
-  public double level() { return level; }
+    private double level;
 
-  public Event put(double amount) { return new PutEvent(this, amount); }
-
-  public Event get(double amount) { return new GetEvent(this, amount); }
-
-  @Override
-  protected boolean doPut(Event event) {
-    PutEvent pe = (PutEvent) event;
-    if (level + pe.amount <= capacity) {
-      level += pe.amount;
-      pe.succeed(null);
+    public Container(Environment env, double capacity, double initial) {
+        if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
+        if (initial < 0 || initial > capacity) throw new IllegalArgumentException("invalid initial");
+        this.level = initial;
+        this.core = new BaseResource(
+                env,
+                (int) Math.ceil(capacity),
+                (event, res) -> {
+                    PutEvent pe = (PutEvent) event;
+                    if (level + pe.amount <= capacity) {
+                        level += pe.amount;
+                        pe.asEvent().succeed(null);
+                    }
+                    return true;
+                },
+                (event, res) -> {
+                    GetEvent ge = (GetEvent) event;
+                    if (level >= ge.amount) {
+                        level -= ge.amount;
+                        ge.asEvent().succeed(ge.amount);
+                    }
+                    return true;
+                }
+        );
     }
-    return true;
-  }
 
-  @Override
-  protected boolean doGet(Event event) {
-    GetEvent ge = (GetEvent) event;
-    if (level >= ge.amount) {
-      level -= ge.amount;
-      ge.succeed(ge.amount);
+    public double level() {
+        return level;
     }
-    return true;
-  }
 
-  public static class PutEvent extends BaseResource.Put {
-    final double amount;
-    public PutEvent(Container c, double amount) {
-      super(c);
-      this.amount = amount;
+    public PutEvent put(double amount) {
+        return new PutEvent(core, amount);
     }
-  }
 
-  public static class GetEvent extends BaseResource.Get {
-    final double amount;
-    public GetEvent(Container c, double amount) {
-      super(c);
-      this.amount = amount;
+    public GetEvent get(double amount) {
+        return new GetEvent(core, amount);
     }
-  }
+
 }

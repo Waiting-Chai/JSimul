@@ -5,18 +5,28 @@ import java.util.Map;
 
 /**
  * Value wrapper for Condition events providing event->value mapping.
- * 
+ *
  * @author waiting
  * @date 2025/10/29
  */
 public class ConditionValue {
-  private final Map<Event, Object> values = new LinkedHashMap<>();
 
-  void add(Event e) { values.put(e, e.value()); }
+    private final Map<Event, Object> values = new LinkedHashMap<>();
 
-  public Map<Event, Object> toMap() { return values; }
+    void add(Event e) {
+        values.put(e, e.value());
+    }
 
-  public boolean contains(Event e) { return values.containsKey(e); }
+    public Map<Event, Object> toMap() {
+        return values;
+    }
 
-  public Object get(Event e) { return values.get(e); }
+    public boolean contains(Event e) {
+        return values.containsKey(e);
+    }
+
+    public Object get(Event e) {
+        return values.get(e);
+    }
+
 }

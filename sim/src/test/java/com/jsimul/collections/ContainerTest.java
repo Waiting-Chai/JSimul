@@ -19,9 +19,9 @@ public class ContainerTest {
     c.put(5);
     env.step();
     assertEquals(15.0, c.level(), 1e-9);
-    Container.GetEvent ge = (Container.GetEvent) c.get(8);
+    GetEvent ge = c.get(8);
     env.step();
-    assertEquals(8.0, ge.value());
+    assertEquals(8.0, ge.asEvent().value());
     assertEquals(7.0, c.level(), 1e-9);
   }
 }
