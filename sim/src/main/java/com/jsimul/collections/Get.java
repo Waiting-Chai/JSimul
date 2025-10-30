@@ -24,7 +24,7 @@ class Get implements SimEvent {
     }
 
     public void cancel() {
-        if (this.inner.triggered()) resource.getQueue.remove(this);
+        if (!this.inner.triggered()) resource.getQueue.remove(this);
     }
 
     @Override

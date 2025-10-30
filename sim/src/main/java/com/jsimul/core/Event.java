@@ -50,7 +50,9 @@ public class Event {
     }
 
     public boolean triggered() {
-        return value == PENDING;
+        // Triggered means the event has been completed (value set),
+        // aligning with common past-tense semantics.
+        return value != PENDING;
     }
 
     public boolean isProcessed() {

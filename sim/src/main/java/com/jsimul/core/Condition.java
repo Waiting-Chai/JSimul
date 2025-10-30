@@ -80,7 +80,8 @@ public class Condition implements SimEvent {
     }
 
     private void check(Event e) {
-        if (!inner.triggered()) return;
+        // If already triggered, no further checks are needed
+        if (inner.triggered()) return;
         this.count += 1;
         if (!e.ok()) {
             e.setDefused(true);

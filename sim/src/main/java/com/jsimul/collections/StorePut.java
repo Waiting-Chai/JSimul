@@ -27,7 +27,7 @@ public class StorePut implements SimEvent {
     }
 
     public void cancel() {
-        if (inner.triggered()) resource.putQueue.remove(this);
+        if (!inner.triggered()) resource.putQueue.remove(this);
     }
 
     @Override

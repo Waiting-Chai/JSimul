@@ -65,13 +65,10 @@ public class Process implements SimEvent {
         }
 
         /**
-         * Await overload that accepts either Event or SimEvent.
-         * If a SimEvent is provided, its underlying Event is awaited.
+         * Type-safe overload to await a compositional SimEvent.
          */
-        public Object await(Object e) throws Exception {
-            if (e instanceof Event) return await((Event) e);
-            if (e instanceof SimEvent) return await(((SimEvent) e).asEvent());
-            throw new IllegalArgumentException("Unsupported await type: " + e);
+        public Object await(SimEvent e) throws Exception {
+            return await(e.asEvent());
         }
 
     }
@@ -103,7 +100,8 @@ public class Process implements SimEvent {
     }
 
     public boolean isAlive() {
-        return inner.triggered();
+        // Alive means completion event not yet triggered
+        return !inner.triggered();
     }
 
     /**
@@ -143,7 +141,7 @@ public class Process implements SimEvent {
     /**
      * Expose Environment for internal helper events.
      */
-    Environment env() {
+    public Environment env() {
         return env;
     }
 

@@ -71,43 +71,77 @@ public class Environment implements BaseEnvironment {
         }
 
         if (!event.ok() && !event.isDefused()) {
-            RuntimeException exc = event.failureAsRuntime();
-            throw exc;
+            throw event.failureAsRuntime();
         }
     }
 
     @Override
     public Object run(Object until) {
-        Event untilEvent = null;
-        if (until == null) {
-            // run until no events left
-        } else if (until instanceof Event) {
-            untilEvent = (Event) until;
-            if (untilEvent.isProcessed()) return untilEvent.value();
-            untilEvent.addCallback(StopSimulation::callback);
-        } else if (until instanceof SimEvent) {
-            untilEvent = ((SimEvent) until).asEvent();
-            if (untilEvent.isProcessed()) return untilEvent.value();
-            untilEvent.addCallback(StopSimulation::callback);
-        } else {
-            double at = ((Number) until).doubleValue();
-            if (at <= now) throw new IllegalArgumentException("until must be > now");
-            untilEvent = new Event(this).markOk(null);
-            schedule(untilEvent, Event.URGENT, at - now);
-            untilEvent.addCallback(StopSimulation::callback);
-        }
+        return switch (until) {
+            case null -> run();
+            case Event event -> run(event);
+            case SimEvent simEvent -> run(simEvent);
+            default -> run(((Number) until).doubleValue());
+        };
+    }
 
-        try {
-            while (true) step();
-        } catch (StopSimulation e) {
-            return e.value();
-        } catch (EmptySchedule e) {
-            if (untilEvent != null && untilEvent.triggered()) {
-                throw new RuntimeException("No scheduled events left but \"until\" not triggered: " + untilEvent);
+    /**
+     * Run until no events are left.
+     */
+    public Object run() {
+        return runInternal(null);
+    }
+
+    /**
+     * Run until the given Event is processed.
+     */
+    public Object run(Event untilEvent) {
+        if (untilEvent == null) return run();
+        if (untilEvent.isProcessed()) return untilEvent.value();
+        untilEvent.addCallback(StopSimulation::callback);
+        return runInternal(untilEvent);
+    }
+
+    /**
+     * Run until the given compositional event is processed.
+     */
+    public Object run(SimEvent untilEvent) {
+        return run(untilEvent == null ? null : untilEvent.asEvent());
+    }
+
+    /**
+     * Run until the given absolute time is reached.
+     */
+    public Object run(double untilTime) {
+        if (untilTime <= now) throw new IllegalArgumentException("until must be > now");
+        Event untilEvent = new Event(this).markOk(null);
+        schedule(untilEvent, Event.URGENT, untilTime - now);
+        untilEvent.addCallback(StopSimulation::callback);
+        return runInternal(untilEvent);
+    }
+
+    /**
+     * Core run loop shared by all run overloads.
+     */
+    private Object runInternal(Event untilEvent) {
+        while ( true ) {
+            try {
+                step();
+            } catch ( StopSimulation e ) {
+                return e.value();
+            } catch ( EmptySchedule e ) {
+                // If we have an until sentinel, and it has NOT yet triggered, wait for new events.
+                if ( untilEvent != null ) {
+                    while ( peek() == Infinity && !untilEvent.isProcessed() && !untilEvent.triggered() ) {
+                        Thread.onSpinWait();
+                    }
+                    // Either new events are scheduled or untilEvent got triggered; try stepping again.
+                    continue;
+                }
+                // No sentinel: terminate when the schedule is empty.
+                return null;
             }
-            return null;
         }
     }
 
-    /** Internal scheduled entry extracted to top-level class. */
 }

@@ -65,7 +65,8 @@ public final class BaseResource {
             SimEvent se = putQueue.get(idx);
             Event e = se.asEvent();
             boolean proceed = _doPut(se);
-            if (e.triggered()) {
+            // Keep pending events in the queue; remove completed ones
+            if (!e.triggered()) {
                 idx++;
             } else if (putQueue.remove(idx) != se) {
                 throw new RuntimeException("Put queue invariant violated");
@@ -80,7 +81,8 @@ public final class BaseResource {
             SimEvent se = getQueue.get(idx);
             Event e = se.asEvent();
             boolean proceed = _doGet(se);
-            if (e.triggered()) {
+            // Keep pending events in the queue; remove completed ones
+            if (!e.triggered()) {
                 idx++;
             } else if (getQueue.remove(idx) != se) {
                 throw new RuntimeException("Get queue invariant violated");
