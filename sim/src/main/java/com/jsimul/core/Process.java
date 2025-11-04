@@ -33,6 +33,19 @@ public class Process implements SimEvent {
             return env;
         }
 
+        private void completeFromEvent(Event ev, CompletableFuture<Object> fut) {
+            if (ev.ok()) {
+                fut.complete(ev.value());
+            } else {
+                Throwable t = (Throwable) ev.value();
+                if (t == null) {
+                    fut.completeExceptionally(new RuntimeException("Event failed without cause"));
+                } else {
+                    fut.completeExceptionally(t);
+                }
+            }
+        }
+
         /**
          * Await completion of an event; returns its value or throws if failed/interrupted.
          */
@@ -41,15 +54,12 @@ public class Process implements SimEvent {
             target = e;
             CompletableFuture<Object> fut = new CompletableFuture<>();
             currentWait.set(fut);
-            e.addCallback(ev -> {
-                if (ev.ok()) {
-                    fut.complete(ev.value());
-                } else {
-                    // propagate failure
-                    Throwable t = (Throwable) ev.value();
-                    fut.completeExceptionally(t);
-                }
-            });
+            Event.Callback callback = ev -> completeFromEvent(ev, fut);
+            e.addCallback(callback);
+            // Handle race where event already processed before callback registration
+            if (e.isProcessed() && !fut.isDone()) {
+                completeFromEvent(e, fut);
+            }
             try {
                 return fut.join();
             } catch (RuntimeException ex) {

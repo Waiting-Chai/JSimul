@@ -16,9 +16,11 @@ public class Environment implements BaseEnvironment {
 
     public static final double Infinity = Double.POSITIVE_INFINITY;
 
-    private double now;
+    private volatile double now;
 
     private final PriorityQueue<Scheduled> queue;
+    
+    private final Object queueLock = new Object();
 
     private final AtomicLong eid;
 
@@ -50,17 +52,25 @@ public class Environment implements BaseEnvironment {
 
     @Override
     public void schedule(Event event, int priority, double delay) {
-        queue.add(new Scheduled(now + delay, priority, eid.incrementAndGet(), event));
+        double time = now + delay;
+        synchronized (queueLock) {
+            queue.add(new Scheduled(time, priority, eid.incrementAndGet(), event));
+        }
     }
 
     public double peek() {
-        Scheduled head = queue.peek();
-        return head == null ? Infinity : head.time();
+        synchronized (queueLock) {
+            Scheduled head = queue.peek();
+            return head == null ? Infinity : head.time();
+        }
     }
 
     @Override
     public void step() {
-        Scheduled s = queue.poll();
+        Scheduled s;
+        synchronized (queueLock) {
+            s = queue.poll();
+        }
         if (s == null) throw new EmptySchedule();
         this.now = s.time();
 
