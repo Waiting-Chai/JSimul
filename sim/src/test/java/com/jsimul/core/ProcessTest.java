@@ -17,7 +17,7 @@ public class ProcessTest {
     Process p = new Process(env, ctx -> ctx.await(new Timeout(ctx.env(), 2, "done")));
     Object ret = env.run(p);
     assertEquals("done", ret);
-    assertTrue(p.isAlive() == false);
+      assertFalse(p.isAlive());
   }
 
   @Test

@@ -104,3 +104,5 @@ coverage/
 *.nyc_output
 /.idea/
 /.vscode/
+
+doc/simpy
