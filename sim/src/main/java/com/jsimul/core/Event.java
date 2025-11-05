@@ -131,6 +131,45 @@ public class Event {
         return this;
     }
 
+    /**
+     * Compose this event with additional operands using logical AND semantics.
+     * The returned {@link SimEvent} succeeds once every operand has completed
+     * successfully.
+     *
+     * @param others further events or {@link SimEvent} instances
+     * @return a composite event mirroring SimPy's {@code event & other}
+     */
+    public SimEvent and(Object... others) {
+        return new Condition(env, Condition::allEvents, composeArgs("and", others));
+    }
+
+    /**
+     * Compose this event with additional operands using logical OR semantics.
+     * The returned {@link SimEvent} succeeds once any operand has completed
+     * successfully.
+     *
+     * @param others further events or {@link SimEvent} instances
+     * @return a composite event mirroring SimPy's {@code event | other}
+     */
+    public SimEvent or(Object... others) {
+        return new Condition(env, Condition::anyEvents, composeArgs("or", others));
+    }
+
+    private List<Object> composeArgs(String opName, Object... others) {
+        if (others == null || others.length == 0) {
+            throw new IllegalArgumentException("Operator '" + opName + "' requires at least one operand");
+        }
+        List<Object> args = new ArrayList<>(others.length + 1);
+        args.add(this);
+        for (Object other : others) {
+            if (other == null) {
+                throw new IllegalArgumentException("Null operand is not allowed for '" + opName + "'");
+            }
+            args.add(other);
+        }
+        return args;
+    }
+
     RuntimeException failureAsRuntime() {
         Throwable t = (Throwable) value;
         RuntimeException rt =

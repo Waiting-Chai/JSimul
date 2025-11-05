@@ -9,12 +9,15 @@ import java.util.List;
  * @author waiting
  * @date 2025/10/29
  */
-public class AllOf implements SimEvent {
+public class AllOf implements ConditionCarrier {
+
+    private final Condition condition;
 
     private final Event inner;
 
     public AllOf(Environment env, List<?> events) {
-        this.inner = new Condition(env, Condition::allEvents, events).asEvent();
+        this.condition = new Condition(env, Condition::allEvents, events);
+        this.inner = condition.asEvent();
     }
 
     public AllOf(Environment env, Object... events) {
@@ -24,6 +27,11 @@ public class AllOf implements SimEvent {
     @Override
     public Event asEvent() {
         return inner;
+    }
+
+    @Override
+    public Condition condition() {
+        return condition;
     }
 
 }

@@ -2,6 +2,8 @@ package com.jsimul.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiPredicate;
 
 /**
@@ -10,7 +12,7 @@ import java.util.function.BiPredicate;
  * @author waiting
  * @date 2025/10/29
  */
-public class Condition implements SimEvent {
+public class Condition implements SimEvent, ConditionCarrier {
 
     public static boolean allEvents(List<Event> events, int count) {
         return events.size() == count;
@@ -24,14 +26,18 @@ public class Condition implements SimEvent {
 
     private final BiPredicate<List<Event>, Integer> evaluate;
 
-    private final List<Event> events;
+    private final List<Event> events = new ArrayList<>();
+
+    private final Map<Event, Condition> nestedByEvent = new HashMap<>();
+
+    private final List<Condition> nestedConditions = new ArrayList<>();
 
     private int count;
 
     public Condition(Environment env, BiPredicate<List<Event>, Integer> evaluate, List<?> events) {
         this.inner = new Event(env);
         this.evaluate = evaluate;
-        this.events = normalize(events);
+        absorb(events);
 
         if (this.events.isEmpty()) {
             inner.succeed(new ConditionValue());
@@ -55,19 +61,65 @@ public class Condition implements SimEvent {
         this.inner.addCallback(this::buildValue);
     }
 
-    private static List<Event> normalize(List<?> input) {
-        List<Event> out = new ArrayList<>();
-        for (Object o : input) {
-            if (o instanceof Event) out.add((Event) o);
-            else if (o instanceof SimEvent) out.add(((SimEvent) o).asEvent());
-            else throw new IllegalArgumentException("Unsupported event type: " + o);
+    private void absorb(List<?> input) {
+        for (Object source : input) {
+            toEvent(source);
         }
-        return out;
+    }
+
+    private Event toEvent(Object source) {
+        if (source instanceof ConditionCarrier carrier) {
+            Condition condition = carrier.condition();
+            registerNested(condition);
+            Event event = condition.asEvent();
+            recordEvent(event, condition);
+            return event;
+        }
+        if (source instanceof Event event) {
+            recordEvent(event, null);
+            return event;
+        }
+        if (source instanceof SimEvent simEvent) {
+            Event event = simEvent.asEvent();
+            recordEvent(event, null);
+            return event;
+        }
+        throw new IllegalArgumentException("Unsupported event type: " + source);
+    }
+
+    private void recordEvent(Event event, Condition nested) {
+        if (!events.contains(event)) {
+            events.add(event);
+        }
+        if (nested != null) {
+            nestedByEvent.put(event, nested);
+        }
+    }
+
+    private void registerNested(Condition condition) {
+        if (condition == this) {
+            return;
+        }
+        if (!nestedConditions.contains(condition)) {
+            nestedConditions.add(condition);
+        }
     }
 
     private void populateValue(ConditionValue cv) {
+        harvestValues(cv);
+    }
+
+    private void harvestValues(ConditionValue cv) {
         for (Event e : events) {
-            if (e.isProcessed()) cv.add(e);
+            if (nestedByEvent.containsKey(e)) {
+                continue;
+            }
+            if (e.isProcessed()) {
+                cv.add(e);
+            }
+        }
+        for (Condition nested : nestedConditions) {
+            nested.harvestValues(cv);
         }
     }
 
@@ -96,6 +148,11 @@ public class Condition implements SimEvent {
     @Override
     public Event asEvent() {
         return inner;
+    }
+
+    @Override
+    public Condition condition() {
+        return this;
     }
 
 }

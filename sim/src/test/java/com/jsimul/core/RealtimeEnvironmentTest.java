@@ -14,7 +14,7 @@ public class RealtimeEnvironmentTest {
 
   @Test
   void processRunsUsingRealtimeStep() {
-    RealtimeEnvironment env = new RealtimeEnvironment(0.0, 0.0, false);
+    RealtimeEnvironment env = new RealtimeEnvironment(0.0, 0.0001, false);
     Process proc =
         env.process(
             ctx -> {
@@ -29,7 +29,7 @@ public class RealtimeEnvironmentTest {
 
   @Test
   void timeoutAndNumericUntilInteractProperly() {
-    RealtimeEnvironment env = new RealtimeEnvironment(0.0, 0.0, false);
+    RealtimeEnvironment env = new RealtimeEnvironment(0.0, 0.0001, false);
     env.timeout(1.0);
     Object result = env.run(1.0);
     assertNull(result);

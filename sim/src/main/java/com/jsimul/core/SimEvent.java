@@ -21,4 +21,24 @@ public interface SimEvent {
         asEvent().addCallback(callback);
     }
 
+    /**
+     * Combine this event with additional operands using logical AND semantics.
+     *
+     * @param others subsequent events or {@link SimEvent} instances
+     * @return composite event representing the AND of all operands
+     */
+    default SimEvent and(Object... others) {
+        return asEvent().and(others);
+    }
+
+    /**
+     * Combine this event with additional operands using logical OR semantics.
+     *
+     * @param others subsequent events or {@link SimEvent} instances
+     * @return composite event representing the OR of all operands
+     */
+    default SimEvent or(Object... others) {
+        return asEvent().or(others);
+    }
+
 }
