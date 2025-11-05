@@ -1,5 +1,7 @@
 package com.jsimul.core;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -56,6 +58,78 @@ public class Environment implements BaseEnvironment {
         synchronized (queueLock) {
             queue.add(new Scheduled(time, priority, eid.incrementAndGet(), event));
         }
+    }
+
+    /**
+     * Create and start a {@link Process} using the supplied function. Matches
+     * the ergonomics of SimPy's {@code env.process(generator)} helper so that
+     * callers do not need to interact with {@link Process} constructors
+     * directly.
+     *
+     * @param function user logic to execute inside the process
+     * @return newly created process instance
+     */
+    public Process process(Process.ProcessFunction function) {
+        return new Process(this, function);
+    }
+
+    /**
+     * Create a {@link Timeout} that fires after the given delay.
+     */
+    public Timeout timeout(double delay) {
+        return new Timeout(this, delay);
+    }
+
+    /**
+     * Create a {@link Timeout} with a payload that will be produced when the
+     * timeout fires.
+     */
+    public Timeout timeout(double delay, Object value) {
+        return new Timeout(this, delay, value);
+    }
+
+    /**
+     * Create a bare {@link Event} bound to this environment, mirroring
+     * SimPy's {@code env.event()} helper.
+     */
+    public Event event() {
+        return new Event(this);
+    }
+
+    /**
+     * Create an {@link AllOf} compositional event for the provided operands.
+     */
+    public SimEvent allOf(Object... events) {
+        return new AllOf(this, normalizeArgs(events));
+    }
+
+    /**
+     * Create an {@link AnyOf} compositional event for the provided operands.
+     */
+    public SimEvent anyOf(Object... events) {
+        return new AnyOf(this, normalizeArgs(events));
+    }
+
+    /**
+     * Terminate the currently active process successfully with the given
+     * return value. This emulates SimPy's {@code env.exit(value)} convenience
+     * for users who prefer early exits instead of {@code return}.
+     *
+     * @param value return value to propagate from the active process
+     */
+    public void exit(Object value) {
+        if (activeProcess == null) {
+            throw new IllegalStateException("No active process to exit");
+        }
+        throw new ProcessExit(value);
+    }
+
+    /**
+     * Convenience overload that terminates the active process without a
+     * result value.
+     */
+    public void exit() {
+        exit(null);
     }
 
     public double peek() {
@@ -152,6 +226,10 @@ public class Environment implements BaseEnvironment {
                 return null;
             }
         }
+    }
+
+    private List<Object> normalizeArgs(Object[] events) {
+        return Arrays.asList(events == null ? new Object[0] : events);
     }
 
 }

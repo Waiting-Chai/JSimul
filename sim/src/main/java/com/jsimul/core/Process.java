@@ -126,7 +126,12 @@ public class Process implements SimEvent {
             env.setActiveProcess(this);
             try {
                 Object ret = function.run(ctx);
-                inner.markOk(ret);
+                if (!inner.triggered()) {
+                    inner.markOk(ret);
+                }
+                env.schedule(inner, Event.NORMAL, 0);
+            } catch (ProcessExit exit) {
+                inner.markOk(exit.value());
                 env.schedule(inner, Event.NORMAL, 0);
             } catch (Throwable t) {
                 inner.fail(t);
