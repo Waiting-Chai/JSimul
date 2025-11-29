@@ -1,6 +1,7 @@
 package com.jsimul.collections;
 
 import com.jsimul.core.Environment;
+import com.jsimul.core.Event;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +54,20 @@ public final class PriorityResource {
 
     public PriorityRequest request(int priority) {
         return new PriorityRequest(this, priority, order.getAndIncrement());
+    }
+
+    public PriorityRequest request(int priority, double timeout) {
+        PriorityRequest req = request(priority);
+        if (timeout > 0) {
+            env.timeout(timeout).addCallback(ev -> {
+                if (!req.asEvent().triggered()) {
+                    cancelRequest(req);
+                    req.asEvent().fail(new RuntimeException("PriorityRequest timeout"));
+                    env.schedule(req.asEvent(), Event.NORMAL, 0);
+                }
+            });
+        }
+        return req;
     }
 
     public PriorityRelease release(PriorityRequest req) {

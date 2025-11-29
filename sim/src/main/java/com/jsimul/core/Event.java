@@ -81,6 +81,15 @@ public class Event {
     }
 
     /**
+     * Remove a callback if still registered (no-op if already processed).
+     */
+    public void removeCallback(Callback cb) {
+        if (callbacks != null) {
+            callbacks.remove(cb);
+        }
+    }
+
+    /**
      * Detach current callbacks for processing; set callbacks to null.
      */
     List<Callback> detachCallbacks() {

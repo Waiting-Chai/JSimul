@@ -70,6 +70,7 @@ public class Process implements SimEvent {
             } finally {
                 currentWait.compareAndSet(fut, null);
                 target = null;
+                e.removeCallback(callback);
             }
         }
 
@@ -159,6 +160,10 @@ public class Process implements SimEvent {
             }
             // If no wait is registered (e.g., interrupt arrived before await), fail the process
             if (!inner.triggered() && e.value() instanceof Throwable t) {
+                if (target != null) {
+                    target.removeCallback(this::_resume);
+                    target = null;
+                }
                 inner.fail(t);
                 env.schedule(inner, Event.NORMAL, 0);
             }

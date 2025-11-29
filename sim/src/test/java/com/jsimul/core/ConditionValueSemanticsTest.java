@@ -50,6 +50,8 @@ public class ConditionValueSemanticsTest {
         failing.fail(new RuntimeException("boom"));
         SimEvent all = env.allOf(failing);
 
-        assertThrows(RuntimeException.class, env::step); // failing event not defused should crash
+        assertDoesNotThrow(env::step); // Condition defuses failing operand
+        assertFalse(all.asEvent().ok());
+        assertTrue(all.asEvent().isDefused());
     }
 }

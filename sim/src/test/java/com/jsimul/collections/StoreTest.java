@@ -49,6 +49,6 @@ public class StoreTest {
         env.step();
         FilterStoreGet g = fs.get(null);
         RuntimeException ex = assertThrows(RuntimeException.class, env::step);
-        assertInstanceOf(IllegalArgumentException.class, ex.getCause());
+        assertInstanceOf(IllegalArgumentException.class, ex);
     }
 }

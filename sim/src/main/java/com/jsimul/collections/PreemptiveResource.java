@@ -68,6 +68,20 @@ public final class PreemptiveResource {
         return new PreemptiveRequest(this, priority, preempt, order.getAndIncrement());
     }
 
+    public PreemptiveRequest request(int priority, boolean preempt, double timeout) {
+        PreemptiveRequest req = request(priority, preempt);
+        if (timeout > 0) {
+            env.timeout(timeout).addCallback(ev -> {
+                if (!req.asEvent().triggered()) {
+                    cancelRequest(req);
+                    req.asEvent().fail(new RuntimeException("PreemptiveRequest timeout"));
+                    env.schedule(req.asEvent(), Event.NORMAL, 0);
+                }
+            });
+        }
+        return req;
+    }
+
     public PreemptiveRelease release(PreemptiveRequest req) {
         return new PreemptiveRelease(this, req);
     }

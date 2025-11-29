@@ -136,9 +136,11 @@ public class Condition implements ConditionCarrier {
         if (inner.triggered()) return;
         this.count += 1;
         if (!e.ok()) {
-            if (e.isDefused()) {
-                inner.setDefused(true);
+            // Defuse the failing operand to prevent environment crash; mirror SimPy behavior.
+            if (!e.isDefused()) {
+                e.setDefused(true);
             }
+            inner.setDefused(e.isDefused());
             inner.fail((Throwable) e.value());
             return;
         }

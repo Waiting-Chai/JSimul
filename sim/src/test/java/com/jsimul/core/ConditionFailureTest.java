@@ -19,7 +19,10 @@ public class ConditionFailureTest {
         Event fail = env.event().fail(new RuntimeException("boom"));
 
         SimEvent all = env.allOf(ok, fail);
-        assertThrows(RuntimeException.class, () -> env.run(all.asEvent()));
+        // failing operand defused by Condition should not crash but mark ok=false
+        env.step(); // process failing
+        env.step(); // process condition
+        assertFalse(all.asEvent().ok());
     }
 
     @Test
