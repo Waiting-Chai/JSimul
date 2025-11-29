@@ -3,6 +3,7 @@ package com.jsimul.core;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.NoSuchElementException;
 
 /**
  * Value wrapper for Condition events providing event->value mapping.
@@ -27,6 +28,9 @@ public class ConditionValue {
     }
 
     public Object get(Event e) {
+        if (!values.containsKey(e)) {
+            throw new NoSuchElementException("Event not present in ConditionValue: " + e);
+        }
         return values.get(e);
     }
 

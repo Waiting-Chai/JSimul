@@ -1,7 +1,6 @@
 package com.jsimul.collections;
 
 import com.jsimul.core.Environment;
-import com.jsimul.core.Event;
 import com.jsimul.core.SimEvent;
 
 import java.util.ArrayList;

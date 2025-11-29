@@ -12,7 +12,7 @@ import java.util.function.BiPredicate;
  * @author waiting
  * @date 2025/10/29
  */
-public class Condition implements SimEvent, ConditionCarrier {
+public class Condition implements ConditionCarrier {
 
     public static boolean allEvents(List<Event> events, int count) {
         return events.size() == count;
@@ -136,7 +136,9 @@ public class Condition implements SimEvent, ConditionCarrier {
         if (inner.triggered()) return;
         this.count += 1;
         if (!e.ok()) {
-            e.setDefused(true);
+            if (e.isDefused()) {
+                inner.setDefused(true);
+            }
             inner.fail((Throwable) e.value());
             return;
         }
