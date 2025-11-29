@@ -74,7 +74,7 @@ public class PreemptiveResourceTest {
         env.step(); // grant one of them
 
         // Create a new request that never held the resource; releasing it must fail
-        PreemptiveRequest neverGranted = new PreemptiveRequest(res, 2, Long.MAX_VALUE);
+        PreemptiveRequest neverGranted = new PreemptiveRequest(res, 2, true, Long.MAX_VALUE);
         PreemptiveRelease bogus = res.release(neverGranted);
         // First step may drain a pending granted request; the next step must surface the failure
         env.step();

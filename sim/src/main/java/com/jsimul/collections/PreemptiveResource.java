@@ -61,7 +61,11 @@ public final class PreemptiveResource {
     }
 
     public PreemptiveRequest request(int priority) {
-        return new PreemptiveRequest(this, priority, order.getAndIncrement());
+        return request(priority, true);
+    }
+
+    public PreemptiveRequest request(int priority, boolean preempt) {
+        return new PreemptiveRequest(this, priority, preempt, order.getAndIncrement());
     }
 
     public PreemptiveRelease release(PreemptiveRequest req) {
@@ -73,9 +77,9 @@ public final class PreemptiveResource {
             grant(req);
             return;
         }
-        // Capacity full: check for preemption
+        // Capacity full: check for preemption if allowed
         PreemptiveRequest victim = findWorstUser();
-        if (victim != null && req.compareTo(victim) < 0) {
+        if (req.isPreempt() && victim != null && req.compareTo(victim) < 0) {
             preempt(victim, req);
             grant(req);
         } else {

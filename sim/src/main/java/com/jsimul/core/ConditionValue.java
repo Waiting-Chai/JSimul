@@ -42,16 +42,30 @@ public class ConditionValue {
     }
 
     /**
+     * @return iterable over values in event insertion order.
+     */
+    public Iterable<Object> values() {
+        return values.values();
+    }
+
+    /**
+     * @return iterable over event/value pairs in insertion order.
+     */
+    public Iterable<Map.Entry<Event, Object>> items() {
+        return values.entrySet();
+    }
+
+    /**
      * SimPy parity: equality compares underlying event->value mapping.
      */
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (obj == null) return false;
-        if (obj instanceof ConditionValue other) {
-            return Objects.equals(this.values, other.values);
-        }
-        return false;
+        return switch (obj) {
+            case ConditionValue other -> Objects.equals(this.values, other.values);
+            case Map<?, ?> map -> values.equals(map);
+            case null, default -> false;
+        };
     }
 
     @Override

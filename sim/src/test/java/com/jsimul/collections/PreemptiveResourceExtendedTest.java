@@ -62,4 +62,25 @@ public class PreemptiveResourceExtendedTest {
         assertEquals(2, res.grantedCount());
         assertEquals(1, res.preemptionCount());
     }
+
+    @Test
+    void nonPreemptingHighPriorityQueuesInsteadOfPreempting() {
+        Environment env = new Environment();
+        PreemptiveResource res = new PreemptiveResource(env, 1);
+
+        PreemptiveRequest inUse = res.request(5);
+        env.step(); // grant inUse
+
+        PreemptiveRequest highButNonPreempt = res.request(1, false);
+        // should queue, not preempt
+        // no step here; next step would throw EmptySchedule since nothing else is scheduled
+        assertFalse(highButNonPreempt.isPreempted());
+        assertFalse(highButNonPreempt.asEvent().triggered());
+
+        res.release(inUse);
+        env.step(); // release
+        env.step(); // grant queued
+        assertTrue(highButNonPreempt.asEvent().ok());
+        assertEquals(0, res.preemptionCount());
+    }
 }
