@@ -26,6 +26,8 @@ public final class PreemptiveResource {
     private final List<PreemptiveRequest> users = new ArrayList<>();
     private final PriorityQueue<PreemptiveRequest> waiters;
     private final AtomicLong order = new AtomicLong();
+    private final AtomicLong grants = new AtomicLong();
+    private final AtomicLong preemptions = new AtomicLong();
 
     public PreemptiveResource(Environment env, int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
@@ -44,6 +46,18 @@ public final class PreemptiveResource {
 
     public int count() {
         return users.size();
+    }
+
+    public int waitingCount() {
+        return waiters.size();
+    }
+
+    public long grantedCount() {
+        return grants.get();
+    }
+
+    public long preemptionCount() {
+        return preemptions.get();
     }
 
     public PreemptiveRequest request(int priority) {
@@ -94,6 +108,7 @@ public final class PreemptiveResource {
 
     private void grant(PreemptiveRequest req) {
         users.add(req);
+        grants.incrementAndGet();
         req.asEvent().succeed(null);
     }
 
@@ -108,6 +123,7 @@ public final class PreemptiveResource {
             return;
         }
         victim.markPreempted();
+        preemptions.incrementAndGet();
         if (!victim.asEvent().triggered()) {
             victim.asEvent().fail(new Preempted(intruder));
         }

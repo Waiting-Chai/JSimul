@@ -24,6 +24,7 @@ public final class PriorityResource {
     private final List<PriorityRequest> users = new ArrayList<>();
     private final PriorityQueue<PriorityRequest> waiters = new PriorityQueue<>();
     private final AtomicLong order = new AtomicLong();
+    private final AtomicLong granted = new AtomicLong();
 
     public PriorityResource(Environment env, int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
@@ -43,6 +44,14 @@ public final class PriorityResource {
         return users.size();
     }
 
+    public int waitingCount() {
+        return waiters.size();
+    }
+
+    public long grantedCount() {
+        return granted.get();
+    }
+
     public PriorityRequest request(int priority) {
         return new PriorityRequest(this, priority, order.getAndIncrement());
     }
@@ -53,8 +62,7 @@ public final class PriorityResource {
 
     void onRequest(PriorityRequest req) {
         if (users.size() < capacity) {
-            users.add(req);
-            req.asEvent().succeed(null);
+            grant(req);
         } else {
             waiters.add(req);
         }
@@ -81,8 +89,13 @@ public final class PriorityResource {
             if (next.asEvent().triggered()) {
                 continue;
             }
-            users.add(next);
-            next.asEvent().succeed(null);
+            grant(next);
         }
+    }
+
+    private void grant(PriorityRequest req) {
+        users.add(req);
+        granted.incrementAndGet();
+        req.asEvent().succeed(null);
     }
 }
