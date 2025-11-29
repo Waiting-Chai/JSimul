@@ -44,4 +44,14 @@ public class EnvironmentTest {
     e2.fail(new RuntimeException("boom"));
     assertDoesNotThrow(env2::step);
   }
+
+  @Test
+  void runUntilEventWithoutScheduleThrows() {
+    Environment env = new Environment();
+    Event until = env.event();
+
+    RuntimeException ex = assertThrows(RuntimeException.class, () -> env.run(until));
+    assertTrue(ex.getMessage().contains("No scheduled events left"));
+    assertEquals(0.0, env.now());
+  }
 }

@@ -36,4 +36,25 @@ public class ProcessTest {
     Object ret = env.run(p);
     assertEquals("interrupted:preempt", ret);
   }
+
+  @Test
+  void selfInterruptIsRejected() {
+    Environment env = new Environment();
+    Process p =
+        env.process(
+            ctx -> {
+              ctx.env().activeProcess().interrupt("self");
+              return "unreachable";
+            });
+
+    assertThrows(IllegalStateException.class, () -> env.run(p));
+  }
+
+  @Test
+  void interruptingDeadProcessFails() {
+    Environment env = new Environment();
+    Process p = env.process(ctx -> "done");
+    assertEquals("done", env.run(p));
+    assertThrows(IllegalStateException.class, () -> p.interrupt("late"));
+  }
 }

@@ -118,6 +118,12 @@ public class Process implements SimEvent {
      * Interrupt this process with optional cause.
      */
     public void interrupt(Object cause) {
+        if (!isAlive()) {
+            throw new IllegalStateException("Process has terminated and cannot be interrupted");
+        }
+        if (env.activeProcess() == this) {
+            throw new IllegalStateException("A process cannot interrupt itself");
+        }
         env.schedule(Interruption.make(this, cause), Event.URGENT, 0);
     }
 
@@ -135,6 +141,7 @@ public class Process implements SimEvent {
                 env.schedule(inner, Event.NORMAL, 0);
             } catch (Throwable t) {
                 inner.fail(t);
+                env.schedule(inner, Event.NORMAL, 0);
             } finally {
                 env.setActiveProcess(null);
             }

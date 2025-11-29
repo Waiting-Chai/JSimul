@@ -57,6 +57,7 @@ public class Environment implements BaseEnvironment {
         double time = now + delay;
         synchronized (queueLock) {
             queue.add(new Scheduled(time, priority, eid.incrementAndGet(), event));
+            queueLock.notifyAll();
         }
     }
 
@@ -214,22 +215,49 @@ public class Environment implements BaseEnvironment {
             } catch ( StopSimulation e ) {
                 return e.value();
             } catch ( EmptySchedule e ) {
-                // If we have an until sentinel, and it has NOT yet triggered, wait for new events.
-                if ( untilEvent != null ) {
-                    while ( peek() == Infinity && !untilEvent.isProcessed() && !untilEvent.triggered() ) {
-                        Thread.onSpinWait();
+                if ( untilEvent != null && !untilEvent.triggered() && !untilEvent.isProcessed() ) {
+                    // Allow a short grace period for asynchronous producers (e.g., processes starting on virtual threads)
+                    if ( awaitNewEvents(untilEvent, 50) ) {
+                        continue;
                     }
-                    // Either new events are scheduled or untilEvent got triggered; try stepping again.
-                    continue;
+                    throw new RuntimeException("No scheduled events left before until condition is met");
                 }
-                // No sentinel: terminate when the schedule is empty.
-                return null;
+                return null; // terminate when the schedule is empty
             }
         }
     }
 
     private List<Object> normalizeArgs(Object[] events) {
         return Arrays.asList(events == null ? new Object[0] : events);
+    }
+
+    /**
+     * Wait briefly for new events to appear or the untilEvent to complete.
+     * Returns true if either condition occurs within the timeout.
+     */
+    private boolean awaitNewEvents(Event untilEvent, long timeoutMillis) {
+        long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
+        while ( System.nanoTime() < deadline ) {
+            if ( untilEvent.triggered() || untilEvent.isProcessed() ) {
+                return true;
+            }
+            synchronized ( queueLock ) {
+                if ( !queue.isEmpty() ) {
+                    return true;
+                }
+                long remainingNanos = deadline - System.nanoTime();
+                if ( remainingNanos <= 0 ) {
+                    break;
+                }
+                try {
+                    queueLock.wait(Math.max(1L, remainingNanos / 1_000_000L));
+                } catch ( InterruptedException ie ) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        return untilEvent.triggered() || untilEvent.isProcessed() || !queue.isEmpty();
     }
 
 }

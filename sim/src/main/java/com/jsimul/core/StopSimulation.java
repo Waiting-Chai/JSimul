@@ -23,9 +23,11 @@ public class StopSimulation extends RuntimeException {
             throw new StopSimulation(event.value());
         } else {
             Throwable t = (Throwable) event.value();
-            RuntimeException rt = (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t);
-            rt.initCause(t);
-            throw rt;
+            if (t instanceof RuntimeException rt) {
+                throw rt;
+            }
+            RuntimeException wrapped = new RuntimeException(t.getMessage(), t);
+            throw wrapped;
         }
     }
 
