@@ -140,6 +140,15 @@ public class Environment implements BaseEnvironment {
         }
     }
 
+    /**
+     * @return number of events currently scheduled (for observability/testing).
+     */
+    public int scheduledCount() {
+        synchronized (queueLock) {
+            return queue.size();
+        }
+    }
+
     @Override
     public void step() {
         Scheduled s;
