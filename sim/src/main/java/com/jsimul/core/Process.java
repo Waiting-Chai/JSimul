@@ -69,7 +69,6 @@ public class Process implements SimEvent {
                 throw ex;
             } finally {
                 currentWait.compareAndSet(fut, null);
-                // Clear the target once the wait completes (success or failure)
                 target = null;
             }
         }
@@ -156,6 +155,12 @@ public class Process implements SimEvent {
             CompletableFuture<Object> wait = currentWait.get();
             if (wait != null && e.value() instanceof Throwable) {
                 wait.completeExceptionally((Throwable) e.value());
+                return;
+            }
+            // If no wait is registered (e.g., interrupt arrived before await), fail the process
+            if (!inner.triggered() && e.value() instanceof Throwable t) {
+                inner.fail(t);
+                env.schedule(inner, Event.NORMAL, 0);
             }
         }
     }

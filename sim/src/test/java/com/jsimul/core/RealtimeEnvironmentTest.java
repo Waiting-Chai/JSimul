@@ -95,4 +95,37 @@ public class RealtimeEnvironmentTest {
         RuntimeException ex = assertThrows(RuntimeException.class, env::step);
         assertTrue(ex.getMessage().contains("too slow"));
     }
+
+    @Test
+    void longIdleFollowedByEventRespectsSync() {
+        FakeClockSleeper controller = new FakeClockSleeper();
+        RealtimeEnvironment env = new RealtimeEnvironment(5.0, 1.0, false, controller, controller);
+
+        // simulate long idle then sync before running
+        controller.seconds = 100.0;
+        env.sync();
+        controller.seconds = 100.5;
+
+        Process proc =
+                env.process(
+                        ctx -> {
+                            ctx.await(env.timeout(1.0, "go"));
+                            return "go";
+                        });
+
+        Object result = env.run(proc);
+        assertEquals("go", result);
+        assertEquals(6.0, env.now(), 1e-9);
+    }
+
+    @Test
+    void verySmallFactorStillSleeps() {
+        FakeClockSleeper controller = new FakeClockSleeper();
+        RealtimeEnvironment env = new RealtimeEnvironment(0.0, 1e-6, false, controller, controller);
+        Process proc = env.process(ctx -> ctx.await(env.timeout(1.0, "tiny")));
+
+        Object result = env.run(proc);
+        assertEquals("tiny", result);
+        assertTrue(controller.sleepCalls > 0);
+    }
 }

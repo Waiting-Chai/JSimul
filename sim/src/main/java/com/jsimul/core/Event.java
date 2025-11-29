@@ -172,9 +172,9 @@ public class Event {
 
     RuntimeException failureAsRuntime() {
         Throwable t = (Throwable) value;
-        RuntimeException rt =
-                (t instanceof RuntimeException) ? (RuntimeException) t : new RuntimeException(t.getMessage(), t);
-        rt.initCause(t);
-        return rt;
+        if (t instanceof RuntimeException rt) {
+            return rt;
+        }
+        return new RuntimeException(t.getMessage(), t);
     }
 }
