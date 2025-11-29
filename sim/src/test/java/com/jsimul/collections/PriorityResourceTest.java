@@ -61,6 +61,6 @@ public class PriorityResourceTest {
         env.step(); // r1 granted
 
         PriorityRelease bogus = res.release(r2);
-        assertThrows(RuntimeException.class, () -> env.step(), "Releasing non-user must fail");
+        assertThrows(RuntimeException.class, env::step, "Releasing non-user must fail");
     }
 }
