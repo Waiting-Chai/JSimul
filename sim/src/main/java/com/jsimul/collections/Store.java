@@ -49,4 +49,8 @@ public class Store {
         return new StoreGet(core);
     }
 
+    BaseResource core() {
+        return core;
+    }
+
 }

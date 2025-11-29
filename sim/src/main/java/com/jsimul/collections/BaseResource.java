@@ -91,4 +91,12 @@ public final class BaseResource {
         }
     }
 
+    public int putQueueSize() {
+        return putQueue.size();
+    }
+
+    public int getQueueSize() {
+        return getQueue.size();
+    }
+
 }

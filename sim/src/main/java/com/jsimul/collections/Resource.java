@@ -44,6 +44,10 @@ public class Resource {
         return users.size();
     }
 
+    BaseResource core() {
+        return core;
+    }
+
     public Request request() {
         return new Request(core);
     }
