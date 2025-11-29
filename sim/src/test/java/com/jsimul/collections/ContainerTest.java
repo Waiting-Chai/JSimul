@@ -24,4 +24,14 @@ public class ContainerTest {
         assertEquals(8.0, ge.asEvent().value());
         assertEquals(7.0, c.level(), 1e-9);
     }
+
+    @Test
+    void negativeAmountsAreRejected() {
+        Environment env = new Environment();
+        Container c = new Container(env, 50, 10);
+        assertThrows(IllegalArgumentException.class, () -> c.put(0));
+        assertThrows(IllegalArgumentException.class, () -> c.put(-1));
+        assertThrows(IllegalArgumentException.class, () -> c.get(0));
+        assertThrows(IllegalArgumentException.class, () -> c.get(-5));
+    }
 }

@@ -40,4 +40,15 @@ public class StoreTest {
         env.step();
         assertEquals(42, g.asEvent().value());
     }
+
+    @Test
+    void nullFilterRejected() {
+        Environment env = new Environment();
+        FilterStore fs = new FilterStore(env, 5);
+        fs.put("a");
+        env.step();
+        FilterStoreGet g = fs.get(null);
+        RuntimeException ex = assertThrows(RuntimeException.class, env::step);
+        assertInstanceOf(IllegalArgumentException.class, ex.getCause());
+    }
 }

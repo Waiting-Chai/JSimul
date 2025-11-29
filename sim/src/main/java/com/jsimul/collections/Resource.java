@@ -50,6 +50,12 @@ public class Resource {
     }
 
     public Release release(Request req) {
+        if (req == null) {
+            throw new IllegalArgumentException("request cannot be null");
+        }
+        if (!users.contains(req)) {
+            throw new IllegalArgumentException("request does not hold the resource");
+        }
         return new Release(core, req);
     }
 

@@ -33,6 +33,10 @@ public class FilterStore {
                 },
                 (event, res) -> {
                     if (event instanceof FilterStoreGet get) {
+                        if (get.filter == null) {
+                            get.asEvent().fail(new IllegalArgumentException("filter cannot be null"));
+                            return true;
+                        }
                         for (int i = 0; i < items.size(); i++) {
                             Object item = items.get(i);
                             if (get.filter.test(item)) {

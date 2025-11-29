@@ -45,10 +45,16 @@ public class Container {
     }
 
     public PutEvent put(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("put amount must be > 0");
+        }
         return new PutEvent(core, amount);
     }
 
     public GetEvent get(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("get amount must be > 0");
+        }
         return new GetEvent(core, amount);
     }
 
