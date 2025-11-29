@@ -1,5 +1,6 @@
 package com.jsimul.core;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,11 +39,7 @@ public class Process implements SimEvent {
                 fut.complete(ev.value());
             } else {
                 Throwable t = (Throwable) ev.value();
-                if (t == null) {
-                    fut.completeExceptionally(new RuntimeException("Event failed without cause"));
-                } else {
-                    fut.completeExceptionally(t);
-                }
+                fut.completeExceptionally(Objects.requireNonNullElseGet(t, () -> new RuntimeException("Event failed without cause")));
             }
         }
 
@@ -140,7 +137,7 @@ public class Process implements SimEvent {
                 inner.markOk(exit.value());
                 env.schedule(inner, Event.NORMAL, 0);
             } catch (Throwable t) {
-                inner.fail(t);
+                inner.fail(stripTraceback(t));
                 env.schedule(inner, Event.NORMAL, 0);
             } finally {
                 env.setActiveProcess(null);
@@ -155,7 +152,7 @@ public class Process implements SimEvent {
         } else {
             CompletableFuture<Object> wait = currentWait.get();
             if (wait != null && e.value() instanceof Throwable) {
-                wait.completeExceptionally((Throwable) e.value());
+                wait.completeExceptionally(stripTraceback((Throwable) e.value()));
                 return;
             }
             // If no wait is registered (e.g., interrupt arrived before await), fail the process
@@ -164,10 +161,18 @@ public class Process implements SimEvent {
                     target.removeCallback(this::_resume);
                     target = null;
                 }
-                inner.fail(t);
+                inner.fail(stripTraceback(t));
                 env.schedule(inner, Event.NORMAL, 0);
             }
         }
+    }
+
+    private Throwable stripTraceback(Throwable t) {
+        // Drop self-causation and return the underlying cause if present.
+        if (t.getCause() != null && t.getCause() != t) {
+            return t.getCause();
+        }
+        return t;
     }
 
     /**
