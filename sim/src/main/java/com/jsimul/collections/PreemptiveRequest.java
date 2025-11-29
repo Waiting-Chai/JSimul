@@ -17,12 +17,14 @@ public final class PreemptiveRequest implements SimEvent, Comparable<PreemptiveR
     final boolean preempt;
     private final Event inner;
     private volatile boolean preempted;
+    private final double created;
 
     PreemptiveRequest(PreemptiveResource resource, int priority, boolean preempt, long order) {
         this.resource = resource;
         this.priority = priority;
         this.order = order;
         this.preempt = preempt;
+        this.created = resource.env().now();
         this.inner = new Event(resource.env());
         resource.onRequest(this);
     }
@@ -48,6 +50,10 @@ public final class PreemptiveRequest implements SimEvent, Comparable<PreemptiveR
 
     public boolean isPreempt() {
         return preempt;
+    }
+
+    double createdTime() {
+        return created;
     }
 
     @Override

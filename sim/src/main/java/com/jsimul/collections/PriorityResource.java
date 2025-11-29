@@ -25,11 +25,17 @@ public final class PriorityResource {
     private final PriorityQueue<PriorityRequest> waiters = new PriorityQueue<>();
     private final AtomicLong order = new AtomicLong();
     private final AtomicLong granted = new AtomicLong();
+    private double totalWait = 0.0;
+    private double busyTime = 0.0;
+    private double lastUpdate;
+    private final double startTime;
 
     public PriorityResource(Environment env, int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
         this.env = env;
         this.capacity = capacity;
+        this.startTime = env.now();
+        this.lastUpdate = startTime;
     }
 
     Environment env() {
@@ -52,6 +58,21 @@ public final class PriorityResource {
         return granted.get();
     }
 
+    public double totalWaitTime() {
+        return totalWait;
+    }
+
+    public double averageWaitTime() {
+        long count = granted.get();
+        return count == 0 ? 0.0 : totalWait / count;
+    }
+
+    public double utilization() {
+        double elapsed = env.now() - startTime;
+        if (elapsed <= 0) return 0.0;
+        return Math.min(1.0, busyTime / (capacity * elapsed));
+    }
+
     public PriorityRequest request(int priority) {
         return new PriorityRequest(this, priority, order.getAndIncrement());
     }
@@ -62,7 +83,7 @@ public final class PriorityResource {
             env.timeout(timeout).addCallback(ev -> {
                 if (!req.asEvent().triggered()) {
                     cancelRequest(req);
-                    req.asEvent().fail(new RuntimeException("PriorityRequest timeout"));
+                    req.asEvent().fail(new RequestTimeout("PriorityRequest timeout"));
                     env.schedule(req.asEvent(), Event.NORMAL, 0);
                 }
             });
@@ -75,6 +96,7 @@ public final class PriorityResource {
     }
 
     void onRequest(PriorityRequest req) {
+        updateBusyTime();
         if (users.size() < capacity) {
             grant(req);
         } else {
@@ -87,6 +109,7 @@ public final class PriorityResource {
     }
 
     void onRelease(PriorityRelease release) {
+        updateBusyTime();
         PriorityRequest req = release.request;
         if (!users.remove(req)) {
             release.asEvent().fail(new IllegalArgumentException("Request not using this resource"));
@@ -108,8 +131,15 @@ public final class PriorityResource {
     }
 
     private void grant(PriorityRequest req) {
+        totalWait += Math.max(0.0, env.now() - req.createdTime());
         users.add(req);
         granted.incrementAndGet();
         req.asEvent().succeed(null);
+    }
+
+    private void updateBusyTime() {
+        double now = env.now();
+        busyTime += (now - lastUpdate) * users.size();
+        lastUpdate = now;
     }
 }

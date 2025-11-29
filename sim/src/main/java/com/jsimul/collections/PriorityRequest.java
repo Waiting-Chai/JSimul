@@ -17,11 +17,13 @@ public final class PriorityRequest implements SimEvent, Comparable<PriorityReque
     final int priority;
     final long order;
     private final Event inner;
+    private final double created;
 
     PriorityRequest(PriorityResource resource, int priority, long order) {
         this.resource = resource;
         this.priority = priority;
         this.order = order;
+        this.created = resource.env().now();
         this.inner = new Event(resource.env());
         resource.onRequest(this);
     }
@@ -45,5 +47,9 @@ public final class PriorityRequest implements SimEvent, Comparable<PriorityReque
         int p = Integer.compare(this.priority, other.priority);
         if (p != 0) return p;
         return Long.compare(this.order, other.order);
+    }
+
+    double createdTime() {
+        return created;
     }
 }

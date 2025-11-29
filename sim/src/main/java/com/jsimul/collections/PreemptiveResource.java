@@ -28,12 +28,18 @@ public final class PreemptiveResource {
     private final AtomicLong order = new AtomicLong();
     private final AtomicLong grants = new AtomicLong();
     private final AtomicLong preemptions = new AtomicLong();
+    private double totalWait = 0.0;
+    private double busyTime = 0.0;
+    private double lastUpdate;
+    private final double startTime;
 
     public PreemptiveResource(Environment env, int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
         this.env = env;
         this.capacity = capacity;
         this.waiters = new PriorityQueue<>();
+        this.startTime = env.now();
+        this.lastUpdate = startTime;
     }
 
     Environment env() {
@@ -60,6 +66,21 @@ public final class PreemptiveResource {
         return preemptions.get();
     }
 
+    public double totalWaitTime() {
+        return totalWait;
+    }
+
+    public double averageWaitTime() {
+        long count = grants.get();
+        return count == 0 ? 0.0 : totalWait / count;
+    }
+
+    public double utilization() {
+        double elapsed = env.now() - startTime;
+        if (elapsed <= 0) return 0.0;
+        return Math.min(1.0, busyTime / (capacity * elapsed));
+    }
+
     public PreemptiveRequest request(int priority) {
         return request(priority, true);
     }
@@ -74,7 +95,7 @@ public final class PreemptiveResource {
             env.timeout(timeout).addCallback(ev -> {
                 if (!req.asEvent().triggered()) {
                     cancelRequest(req);
-                    req.asEvent().fail(new RuntimeException("PreemptiveRequest timeout"));
+                    req.asEvent().fail(new RequestTimeout("PreemptiveRequest timeout"));
                     env.schedule(req.asEvent(), Event.NORMAL, 0);
                 }
             });
@@ -87,6 +108,7 @@ public final class PreemptiveResource {
     }
 
     void onRequest(PreemptiveRequest req) {
+        updateBusyTime();
         if (users.size() < capacity) {
             grant(req);
             return;
@@ -106,6 +128,7 @@ public final class PreemptiveResource {
     }
 
     void onRelease(PreemptiveRelease rel) {
+        updateBusyTime();
         PreemptiveRequest req = rel.request;
         if (!users.remove(req)) {
             rel.asEvent().fail(new IllegalArgumentException("Request not holding resource"));
@@ -125,6 +148,7 @@ public final class PreemptiveResource {
     }
 
     private void grant(PreemptiveRequest req) {
+        totalWait += Math.max(0.0, env.now() - req.createdTime());
         users.add(req);
         grants.incrementAndGet();
         req.asEvent().succeed(null);
@@ -145,5 +169,11 @@ public final class PreemptiveResource {
         if (!victim.asEvent().triggered()) {
             victim.asEvent().fail(new Preempted(intruder));
         }
+    }
+
+    private void updateBusyTime() {
+        double now = env.now();
+        busyTime += (now - lastUpdate) * users.size();
+        lastUpdate = now;
     }
 }
