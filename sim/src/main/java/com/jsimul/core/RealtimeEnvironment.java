@@ -24,6 +24,10 @@ public final class RealtimeEnvironment implements BaseEnvironment {
 
     private volatile double realStart;
 
+    private final Clock clock;
+
+    private final Sleeper sleeper;
+
     /**
      * Create a real-time environment starting at time {@code 0} with a wall
      * clock factor of {@code 1.0} and strict mode enabled.
@@ -39,11 +43,17 @@ public final class RealtimeEnvironment implements BaseEnvironment {
      *                    than one simulated step
      */
     public RealtimeEnvironment(double initialTime, double factor, boolean strict) {
+        this(initialTime, factor, strict, SystemClock.INSTANCE, DefaultSleeper.INSTANCE);
+    }
+
+    RealtimeEnvironment(double initialTime, double factor, boolean strict, Clock clock, Sleeper sleeper) {
         this.delegate = new Environment(initialTime);
         this.factor = factor;
         this.strict = strict;
         this.envStart = initialTime;
-        this.realStart = monotonicSeconds();
+        this.clock = clock;
+        this.sleeper = sleeper;
+        this.realStart = clock.nowSeconds();
     }
 
     /**
@@ -65,7 +75,7 @@ public final class RealtimeEnvironment implements BaseEnvironment {
      * environment creation and {@link #run(Object)}.
      */
     public void sync() {
-        this.realStart = monotonicSeconds();
+        this.realStart = clock.nowSeconds();
     }
 
     /**
@@ -197,14 +207,14 @@ public final class RealtimeEnvironment implements BaseEnvironment {
 
     private void delayUntil(double target) {
         while (true) {
-            double delta = target - monotonicSeconds();
+            double delta = target - clock.nowSeconds();
             if (delta <= 0) {
                 break;
             }
             sleep(delta);
         }
         if (strict) {
-            double lag = monotonicSeconds() - target;
+            double lag = clock.nowSeconds() - target;
             if (lag > factor) {
                 throw new RuntimeException(String.format("Simulation too slow for real time (lag=%.3fs)", lag));
             }
@@ -212,19 +222,40 @@ public final class RealtimeEnvironment implements BaseEnvironment {
     }
 
     private void sleep(double seconds) {
-        long millis = (long) (seconds * 1000);
-        if (millis > 1) {
-            try {
-                Thread.sleep(millis);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-        } else {
-            Thread.onSpinWait();
+        long nanos = (long) (seconds * 1_000_000_000L);
+        long clamped = Math.max(1L, Math.min(nanos, 50_000_000L)); // clamp to <=50ms to stay responsive
+        try {
+            sleeper.sleepNanos(clamped);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
         }
     }
 
-    private double monotonicSeconds() {
-        return System.nanoTime() / 1_000_000_000.0;
+    interface Clock {
+        double nowSeconds();
+    }
+
+    interface Sleeper {
+        void sleepNanos(long nanos) throws InterruptedException;
+    }
+
+    private enum SystemClock implements Clock {
+        INSTANCE;
+        @Override
+        public double nowSeconds() {
+            return System.nanoTime() / 1_000_000_000.0;
+        }
+    }
+
+    private enum DefaultSleeper implements Sleeper {
+        INSTANCE;
+        @Override
+        public void sleepNanos(long nanos) throws InterruptedException {
+            long millis = nanos / 1_000_000L;
+            int nanosPart = (int) (nanos % 1_000_000L);
+            if (millis > 0 || nanosPart > 0) {
+                Thread.sleep(millis, nanosPart);
+            }
+        }
     }
 }

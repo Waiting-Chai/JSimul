@@ -63,6 +63,32 @@ public class ConditionCompositionTest {
     }
 
     @Test
+    void conditionValueProvidesEventIterationAndEquality() {
+        Environment env = new Environment();
+        Timeout a = env.timeout(1.0, "A");
+        Timeout b = env.timeout(1.0, "B"); // same time to check ordering
+
+        SimEvent both = env.allOf(a, b);
+        env.run(both);
+
+        ConditionValue cv = (ConditionValue) both.asEvent().value();
+        // iterate events in insertion order
+        var iter = cv.events().iterator();
+        assertTrue(iter.hasNext());
+        assertEquals(a.asEvent(), iter.next());
+        assertTrue(iter.hasNext());
+        assertEquals(b.asEvent(), iter.next());
+        assertFalse(iter.hasNext());
+
+        // equality with itself and another identical ConditionValue
+        ConditionValue cv2 = new ConditionValue();
+        cv2.add(a.asEvent());
+        cv2.add(b.asEvent());
+        assertEquals(cv, cv2);
+        assertEquals(cv.hashCode(), cv2.hashCode());
+    }
+
+    @Test
     void mixingDifferentEnvironmentsFails() {
         Environment env1 = new Environment();
         Environment env2 = new Environment();
