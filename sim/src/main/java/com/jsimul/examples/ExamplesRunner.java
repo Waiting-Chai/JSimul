@@ -16,11 +16,13 @@ public final class ExamplesRunner {
                 case "basic" -> runWithTimeout(executor, "BasicUsageExample", () -> BasicUsageExample.main(new String[0]));
                 case "condition" -> runWithTimeout(executor, "ConditionExample", () -> ConditionExample.main(new String[0]));
                 case "resource" -> runWithTimeout(executor, "ResourceUsageExample", () -> ResourceUsageExample.main(new String[0]));
+                case "simutil" -> runWithTimeout(executor, "SimUtilExample", () -> SimUtilExample.main(new String[0]));
                 case "flow" -> runWithTimeout(executor, "FlowLineScenario", () -> FlowLineScenario.main(slice(args)));
                 default -> {
                     runWithTimeout(executor, "BasicUsageExample", () -> BasicUsageExample.main(new String[0]));
                     runWithTimeout(executor, "ConditionExample", () -> ConditionExample.main(new String[0]));
                     runWithTimeout(executor, "ResourceUsageExample", () -> ResourceUsageExample.main(new String[0]));
+                    runWithTimeout(executor, "SimUtilExample", () -> SimUtilExample.main(new String[0]));
                 }
             }
         } finally {

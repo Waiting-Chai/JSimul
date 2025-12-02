@@ -10,6 +10,9 @@ import java.util.logging.Logger;
 
 /**
  * Demonstrates Condition composition (anyOf / allOf) with logging.
+ *
+ * @author waiting
+ * @date 2025/12/02
  */
 public final class ConditionExample {
 

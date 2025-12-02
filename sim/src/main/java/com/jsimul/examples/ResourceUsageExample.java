@@ -10,9 +10,6 @@ import java.util.logging.Logger;
 
 /**
  * Demonstrates Resource request/release with a single machine and queued jobs.
- */
-/**
- * Demonstrates Resource request/release with a single machine and queued jobs.
  *
  * @author waiting
  * @date 2025/12/02

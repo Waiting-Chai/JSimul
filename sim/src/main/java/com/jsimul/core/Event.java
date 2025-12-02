@@ -83,15 +83,11 @@ public class Event {
     public synchronized void addCallback(Callback cb) {
         if (callbacks != null) {
             callbacks.add(cb);
-        } else {
-            // Already processed, call immediately
-            // IMPORTANT: Calling callback while holding lock is risky if callback calls back into Event.
-            // But for simple callbacks it's usually fine.
-            // However, if callback calls addCallback/removeCallback, we might deadlock or recurse.
-            // SimPy behavior: callbacks are invoked immediately if event is processed.
-            // To be safe, we should probably release lock before calling, but callbacks is null so state is stable.
-            cb.call(this);
         }
+        // If callbacks is null, the event has already been processed.
+        // According to SimPy parity requirements (and SimPy 2/3 behavior in some contexts),
+        // adding a callback to a processed event might be ignored or raise error.
+        // The unit test `callbacksIgnoredAfterProcessing` requires it to be ignored.
     }
 
     /**
