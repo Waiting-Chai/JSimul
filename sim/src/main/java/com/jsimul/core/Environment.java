@@ -89,6 +89,17 @@ public class Environment implements BaseEnvironment {
     }
 
     /**
+     * Create and start a named {@link Process}.
+     *
+     * @param function user logic to execute inside the process
+     * @param name     name of the process
+     * @return newly created process instance
+     */
+    public Process process(Process.ProcessFunction function, String name) {
+        return new Process(this, function, name);
+    }
+
+    /**
      * Create a {@link Timeout} that fires after the given delay.
      */
     public Timeout timeout(double delay) {
@@ -297,7 +308,6 @@ public class Environment implements BaseEnvironment {
         }
     }
 
-    //   帮我给这个方法取个名字，它的作用是处理一个事件，包括更新时间、调用回调、检查失败等
     private void processEvent(Scheduled s) {
         this.now = s.time();
         Event event = s.event();

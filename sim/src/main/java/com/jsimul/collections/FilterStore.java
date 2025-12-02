@@ -9,14 +9,15 @@ import java.util.function.Predicate;
 /**
  * Store supporting filtered get requests.
  *
+ * @param <T> the type of items stored
  * @author waiting
  * @date 2025/10/29
  */
-public class FilterStore {
+public class FilterStore<T> {
 
     private final BaseResource core;
 
-    protected final List<Object> items = new ArrayList<>();
+    protected final List<T> items = new ArrayList<>();
 
     public FilterStore(Environment env, int capacity) {
         this.core = new BaseResource(
@@ -25,7 +26,9 @@ public class FilterStore {
                 (event, res) -> {
                     StorePut put = (StorePut) event;
                     if (items.size() < capacity) {
-                        items.add(put.item);
+                        @SuppressWarnings("unchecked")
+                        T item = (T) put.item;
+                        items.add(item);
                         put.asEvent().succeed(null);
                     }
                     return true;
@@ -37,8 +40,10 @@ public class FilterStore {
                             return true;
                         }
                         for (int i = 0; i < items.size(); i++) {
-                            Object item = items.get(i);
-                            if (get.filter.test(item)) {
+                            T item = items.get(i);
+                            @SuppressWarnings("unchecked")
+                            Predicate<T> filter = (Predicate<T>) get.filter;
+                            if (filter.test(item)) {
                                 items.remove(i);
                                 get.asEvent().succeed(item);
                                 break;
@@ -48,7 +53,7 @@ public class FilterStore {
                     }
                     StoreGet get = (StoreGet) event;
                     if (!items.isEmpty()) {
-                        Object v = items.removeFirst();
+                        T v = items.removeFirst();
                         get.asEvent().succeed(v);
                     }
                     return true;
@@ -56,7 +61,7 @@ public class FilterStore {
         );
     }
 
-    public StorePut put(Object item) {
+    public StorePut put(T item) {
         return new StorePut(core, item);
     }
 
@@ -64,8 +69,8 @@ public class FilterStore {
         return new StoreGet(core);
     }
 
-    public FilterStoreGet get(Predicate<Object> filter) {
-        return new FilterStoreGet(core, filter);
+    public FilterStoreGet get(Predicate<T> filter) {
+        return new FilterStoreGet(core, filter); // FilterStoreGet stores Predicate<Object> or T?
     }
 
 }

@@ -15,11 +15,11 @@ public class FilterStoreGet implements SimEvent {
 
     final BaseResource resource;
 
-    final Predicate<Object> filter;
+    final Predicate<?> filter;
 
     private final Event inner;
 
-    FilterStoreGet(BaseResource resource, Predicate<Object> filter) {
+    FilterStoreGet(BaseResource resource, Predicate<?> filter) {
         this.resource = resource;
         this.filter = filter;
         this.inner = new Event(resource.env);

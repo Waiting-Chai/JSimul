@@ -37,16 +37,31 @@ public class Event {
 
     protected boolean defused;
 
+    protected String name;
+
     public Event(Environment env) {
         this.env = env;
+    }
+
+    public Event(Environment env, String name) {
+        this.env = env;
+        this.name = name;
     }
 
     public Environment env() {
         return env;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String toString() {
-        return getClass().getSimpleName() + "()";
+        return getClass().getSimpleName() + "(" + (name != null ? name : "") + ")";
     }
 
     public boolean triggered() {

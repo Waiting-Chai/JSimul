@@ -108,11 +108,29 @@ public class Process implements SimEvent {
     private static final ExecutorService EXEC = Executors.newVirtualThreadPerTaskExecutor();
 
     public Process(Environment env, ProcessFunction function) {
+        this(env, function, null);
+    }
+
+    public Process(Environment env, ProcessFunction function, String name) {
         this.env = env;
-        this.inner = new Event(env);
+        this.inner = new Event(env, name);
         this.function = function;
         // schedule initialization urgently to start before interrupts
         env.schedule(Initialize.make(env, this), Event.URGENT, 0);
+    }
+
+    @Override
+    public String toString() {
+        String n = inner.getName();
+        return getClass().getSimpleName() + "(" + (n != null ? n : "") + ")";
+    }
+
+    public String getName() {
+        return inner.getName();
+    }
+
+    public void setName(String name) {
+        inner.setName(name);
     }
 
     public Event target() {

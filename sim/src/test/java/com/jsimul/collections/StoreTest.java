@@ -15,7 +15,7 @@ public class StoreTest {
     @Test
     void fifoPutGet() {
         Environment env = new Environment();
-        Store s = new Store(env, 10);
+        Store<String> s = new Store<>(env, 10);
         s.put("a");
         s.put("b");
         env.step();
@@ -31,7 +31,7 @@ public class StoreTest {
     @Test
     void filterStoreGet() {
         Environment env = new Environment();
-        FilterStore fs = new FilterStore(env, 10);
+        FilterStore<Object> fs = new FilterStore<>(env, 10);
         fs.put("x");
         fs.put(42);
         env.step();
@@ -42,9 +42,26 @@ public class StoreTest {
     }
 
     @Test
+    void filterStoreTyped() {
+        Environment env = new Environment();
+        FilterStore<Integer> fs = new FilterStore<>(env, 10);
+        fs.put(10);
+        fs.put(20);
+        fs.put(30);
+        env.step();
+        env.step();
+        env.step();
+        
+        // Get strictly greater than 15
+        FilterStoreGet g = fs.get(i -> i > 15);
+        env.step();
+        assertEquals(20, g.asEvent().value());
+    }
+
+    @Test
     void nullFilterRejected() {
         Environment env = new Environment();
-        FilterStore fs = new FilterStore(env, 5);
+        FilterStore<String> fs = new FilterStore<>(env, 5);
         fs.put("a");
         env.step();
         FilterStoreGet g = fs.get(null);
