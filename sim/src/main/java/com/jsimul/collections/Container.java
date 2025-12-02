@@ -10,7 +10,7 @@ import com.jsimul.core.Environment;
  */
 public class Container {
 
-    private final BaseResource core;
+    private final BaseResource<? extends PutEvent, ? extends GetEvent> core;
 
     private double level;
 
@@ -18,22 +18,20 @@ public class Container {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
         if (initial < 0 || initial > capacity) throw new IllegalArgumentException("invalid initial");
         this.level = initial;
-        this.core = new BaseResource(
+        this.core = new BaseResource<>(
                 env,
                 (int) Math.ceil(capacity),
                 (event, res) -> {
-                    PutEvent pe = (PutEvent) event;
-                    if (level + pe.amount <= capacity) {
-                        level += pe.amount;
-                        pe.asEvent().succeed(null);
+                    if (level + event.amount <= capacity) {
+                        level += event.amount;
+                        event.asEvent().succeed(null);
                     }
                     return true;
                 },
                 (event, res) -> {
-                    GetEvent ge = (GetEvent) event;
-                    if (level >= ge.amount) {
-                        level -= ge.amount;
-                        ge.asEvent().succeed(ge.amount);
+                    if (level >= event.amount) {
+                        level -= event.amount;
+                        event.asEvent().succeed(event.amount);
                     }
                     return true;
                 }

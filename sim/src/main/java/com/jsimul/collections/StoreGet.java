@@ -4,18 +4,19 @@ import com.jsimul.core.Event;
 import com.jsimul.core.SimEvent;
 
 /**
- * Store get event returning next item.
+ * Store get event.
  *
+ * @param <T> the type of item retrieved
  * @author waiting
  * @date 2025/10/29
  */
-public class StoreGet implements SimEvent {
+public class StoreGet<T> implements SimEvent {
 
-    final BaseResource resource;
+    final BaseResource<?, StoreGet<T>> resource;
 
     private final Event inner;
 
-    StoreGet(BaseResource resource) {
+    StoreGet(BaseResource<?, StoreGet<T>> resource) {
         this.resource = resource;
         this.inner = new Event(resource.env);
         resource.getQueue.add(this);

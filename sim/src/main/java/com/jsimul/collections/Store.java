@@ -14,45 +14,41 @@ import java.util.List;
  */
 public class Store<T> {
 
-    private final BaseResource core;
+    private final BaseResource<StorePut<T>, StoreGet<T>> core;
 
     protected final List<T> items = new ArrayList<>();
 
     public Store(Environment env, int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
-        this.core = new BaseResource(
+        this.core = new BaseResource<>(
                 env,
                 capacity,
                 (event, res) -> {
-                    StorePut put = (StorePut) event;
                     if (items.size() < capacity) {
-                        @SuppressWarnings("unchecked")
-                        T item = (T) put.item;
-                        items.add(item);
-                        put.asEvent().succeed(null);
+                        items.add(event.item);
+                        event.asEvent().succeed(null);
                     }
                     return true;
                 },
                 (event, res) -> {
-                    StoreGet get = (StoreGet) event;
                     if (!items.isEmpty()) {
                         T v = items.removeFirst();
-                        get.asEvent().succeed(v);
+                        event.asEvent().succeed(v);
                     }
                     return true;
                 }
         );
     }
 
-    public StorePut put(T item) {
-        return new StorePut(core, item);
+    public StorePut<T> put(T item) {
+        return new StorePut<>(core, item);
     }
 
-    public StoreGet get() {
-        return new StoreGet(core);
+    public StoreGet<T> get() {
+        return new StoreGet<>(core);
     }
 
-    BaseResource core() {
+    public BaseResource<StorePut<T>, StoreGet<T>> core() {
         return core;
     }
 

@@ -6,18 +6,19 @@ import com.jsimul.core.SimEvent;
 /**
  * Store put event carrying an item.
  *
+ * @param <T> the type of item
  * @author waiting
  * @date 2025/10/29
  */
-public class StorePut implements SimEvent {
+public class StorePut<T> implements SimEvent {
 
-    final BaseResource resource;
+    final BaseResource<StorePut<T>, ?> resource;
 
-    final Object item;
+    final T item;
 
     private final Event inner;
 
-    StorePut(BaseResource resource, Object item) {
+    StorePut(BaseResource<StorePut<T>, ?> resource, T item) {
         this.resource = resource;
         this.item = item;
         this.inner = new Event(resource.env);

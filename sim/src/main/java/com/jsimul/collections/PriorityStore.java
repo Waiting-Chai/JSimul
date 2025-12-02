@@ -14,7 +14,7 @@ import java.util.PriorityQueue;
  */
 public class PriorityStore<T> {
 
-    private final BaseResource core;
+    private final BaseResource<StorePut<T>, StoreGet<T>> core;
 
     private final PriorityQueue<T> heap;
 
@@ -24,36 +24,32 @@ public class PriorityStore<T> {
 
     public PriorityStore(Environment env, int capacity, Comparator<? super T> comparator) {
         this.heap = comparator == null ? new PriorityQueue<>() : new PriorityQueue<>(comparator);
-        this.core = new BaseResource(
+        this.core = new BaseResource<>(
                 env,
                 capacity,
                 (event, res) -> {
-                    StorePut put = (StorePut) event;
                     if (heap.size() < res.capacity) {
-                        @SuppressWarnings("unchecked")
-                        T item = (T) put.item;
-                        heap.add(item);
-                        put.asEvent().succeed(null);
+                        heap.add(event.item);
+                        event.asEvent().succeed(null);
                     }
                     return true;
                 },
                 (event, res) -> {
-                    StoreGet get = (StoreGet) event;
                     if (!heap.isEmpty()) {
                         T v = heap.poll();
-                        get.asEvent().succeed(v);
+                        event.asEvent().succeed(v);
                     }
                     return true;
                 }
         );
     }
 
-    public StorePut put(T item) {
-        return new StorePut(core, item);
+    public StorePut<T> put(T item) {
+        return new StorePut<>(core, item);
     }
 
-    public StoreGet get() {
-        return new StoreGet(core);
+    public StoreGet<T> get() {
+        return new StoreGet<>(core);
     }
 
 }

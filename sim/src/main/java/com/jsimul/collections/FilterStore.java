@@ -15,62 +15,47 @@ import java.util.function.Predicate;
  */
 public class FilterStore<T> {
 
-    private final BaseResource core;
+    private final BaseResource<StorePut<T>, FilterStoreGet> core;
 
     protected final List<T> items = new ArrayList<>();
 
     public FilterStore(Environment env, int capacity) {
-        this.core = new BaseResource(
+        this.core = new BaseResource<>(
                 env,
                 capacity,
                 (event, res) -> {
-                    StorePut put = (StorePut) event;
                     if (items.size() < capacity) {
-                        @SuppressWarnings("unchecked")
-                        T item = (T) put.item;
-                        items.add(item);
-                        put.asEvent().succeed(null);
+                        items.add(event.item);
+                        event.asEvent().succeed(null);
                     }
                     return true;
                 },
                 (event, res) -> {
-                    if (event instanceof FilterStoreGet get) {
-                        if (get.filter == null) {
-                            get.asEvent().fail(new IllegalArgumentException("filter cannot be null"));
-                            return true;
-                        }
-                        for (int i = 0; i < items.size(); i++) {
-                            T item = items.get(i);
-                            @SuppressWarnings("unchecked")
-                            Predicate<T> filter = (Predicate<T>) get.filter;
-                            if (filter.test(item)) {
-                                items.remove(i);
-                                get.asEvent().succeed(item);
-                                break;
-                            }
-                        }
+                    if (event.filter == null) {
+                        event.asEvent().fail(new IllegalArgumentException("filter cannot be null"));
                         return true;
                     }
-                    StoreGet get = (StoreGet) event;
-                    if (!items.isEmpty()) {
-                        T v = items.removeFirst();
-                        get.asEvent().succeed(v);
+                    for (int i = 0; i < items.size(); i++) {
+                        T item = items.get(i);
+                        @SuppressWarnings("unchecked")
+                        Predicate<T> filter = (Predicate<T>) event.filter;
+                        if (filter.test(item)) {
+                            items.remove(i);
+                            event.asEvent().succeed(item);
+                            break;
+                        }
                     }
                     return true;
                 }
         );
     }
 
-    public StorePut put(T item) {
-        return new StorePut(core, item);
-    }
-
-    public StoreGet get() {
-        return new StoreGet(core);
+    public StorePut<T> put(T item) {
+        return new StorePut<>(core, item);
     }
 
     public FilterStoreGet get(Predicate<T> filter) {
-        return new FilterStoreGet(core, filter); // FilterStoreGet stores Predicate<Object> or T?
+        return new FilterStoreGet(core, filter);
     }
 
 }
