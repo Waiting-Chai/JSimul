@@ -11,15 +11,15 @@ import java.util.function.Predicate;
  * @author waiting
  * @date 2025/10/29
  */
-public class FilterStoreGet implements SimEvent {
+public class FilterStoreGet<T> implements SimEvent {
 
-    final BaseResource<?, FilterStoreGet> resource;
+    final BaseResource<?, FilterStoreGet<T>> resource;
 
-    final Predicate<?> filter;
+    final Predicate<T> filter;
 
     private final Event inner;
 
-    FilterStoreGet(BaseResource<?, FilterStoreGet> resource, Predicate<?> filter) {
+    FilterStoreGet(BaseResource<?, FilterStoreGet<T>> resource, Predicate<T> filter) {
         this.resource = resource;
         this.filter = filter;
         this.inner = new Event(resource.env);

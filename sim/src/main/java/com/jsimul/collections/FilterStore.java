@@ -15,7 +15,7 @@ import java.util.function.Predicate;
  */
 public class FilterStore<T> {
 
-    private final BaseResource<StorePut<T>, FilterStoreGet> core;
+    private final BaseResource<StorePut<T>, FilterStoreGet<T>> core;
 
     protected final List<T> items = new ArrayList<>();
 
@@ -37,8 +37,7 @@ public class FilterStore<T> {
                     }
                     for (int i = 0; i < items.size(); i++) {
                         T item = items.get(i);
-                        @SuppressWarnings("unchecked")
-                        Predicate<T> filter = (Predicate<T>) event.filter;
+                        Predicate<T> filter = event.filter;
                         if (filter.test(item)) {
                             items.remove(i);
                             event.asEvent().succeed(item);
@@ -54,8 +53,8 @@ public class FilterStore<T> {
         return new StorePut<>(core, item);
     }
 
-    public FilterStoreGet get(Predicate<T> filter) {
-        return new FilterStoreGet(core, filter);
+    public FilterStoreGet<T> get(Predicate<T> filter) {
+        return new FilterStoreGet<>(core, filter);
     }
 
 }

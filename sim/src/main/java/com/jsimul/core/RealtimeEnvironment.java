@@ -179,29 +179,34 @@ public final class RealtimeEnvironment implements BaseEnvironment {
     }
 
     private Event resolveUntil(Object until) {
-        if (until == null) {
-            return null;
-        }
-        if (until instanceof Event e) {
-            if (e.isProcessed()) {
+        switch (until) {
+            case null -> {
+                return null;
+            }
+            case Event e -> {
+                if (e.isProcessed()) {
+                    return e;
+                }
+                e.addCallback(StopSimulation::callback);
                 return e;
             }
-            e.addCallback(StopSimulation::callback);
-            return e;
-        }
-        if (until instanceof SimEvent se) {
-            return resolveUntil(se.asEvent());
-        }
-        if (until instanceof Number number) {
-            double target = number.doubleValue();
-            if (target <= now()) {
-                throw new IllegalArgumentException("until must be > now");
+            case SimEvent se -> {
+                return resolveUntil(se.asEvent());
             }
-            Event event = new Event(delegate).markOk(null);
-            schedule(event, Event.URGENT, target - now());
-            event.addCallback(StopSimulation::callback);
-            return event;
+            case Number number -> {
+                double target = number.doubleValue();
+                if (target <= now()) {
+                    throw new IllegalArgumentException("until must be > now");
+                }
+                Event event = new Event(delegate).markOk(null);
+                schedule(event, Event.URGENT, target - now());
+                event.addCallback(StopSimulation::callback);
+                return event;
+            }
+            default -> {
+            }
         }
+
         throw new IllegalArgumentException("Unsupported until type: " + until);
     }
 

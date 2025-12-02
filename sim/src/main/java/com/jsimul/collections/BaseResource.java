@@ -17,7 +17,7 @@ import java.util.function.BiFunction;
  * @author waiting
  * @date 2025/10/29
  */
-public final class BaseResource<P extends SimEvent, G extends SimEvent> {
+public class BaseResource<P extends SimEvent, G extends SimEvent> {
 
     final Environment env;
 
@@ -42,18 +42,6 @@ public final class BaseResource<P extends SimEvent, G extends SimEvent> {
 
     public int capacity() {
         return capacity;
-    }
-
-    public SimEvent put() {
-        @SuppressWarnings("unchecked")
-        BaseResource<Put, Get> res = (BaseResource<Put, Get>) this;
-        return new Put(res);
-    }
-
-    public SimEvent get() {
-        @SuppressWarnings("unchecked")
-        BaseResource<Put, Get> res = (BaseResource<Put, Get>) this;
-        return new Get(res);
     }
 
     private boolean _doPut(P event) {

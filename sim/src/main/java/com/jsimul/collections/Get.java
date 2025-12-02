@@ -9,7 +9,7 @@ import com.jsimul.core.SimEvent;
  * @author waiting
  * @date 2025/10/29
  */
-class Get implements SimEvent {
+public class Get implements SimEvent {
 
     final BaseResource<Put, Get> resource;
 
