@@ -6,7 +6,6 @@ import com.jsimul.core.Environment;
 import com.jsimul.core.Process;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.DoubleAdder;
 import java.util.logging.Level;
@@ -100,10 +99,9 @@ public final class FlowLineScenario {
                 new Object[]{params.dailyTarget(), vehicles, params.vehicleSpeedMps(), interArrival});
 
         for (int i = 0; i < params.dailyTarget(); i++) {
-            final int jobId = i;
             final double releaseAt = i * interArrival;
             env.process(jobProcess(env, vehiclePool, stations, params.vehicleSpeedMps(),
-                    jobId, releaseAt, completed, totalFlow, verboseEvents));
+                    i, releaseAt, completed, totalFlow, verboseEvents));
         }
 
         env.run(DAY_SECONDS);

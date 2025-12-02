@@ -11,11 +11,11 @@ import com.jsimul.core.SimEvent;
  */
 public class Request implements SimEvent {
 
-    final BaseResource resource;
+    final BaseResource<Request, Release> resource;
 
     private final Event inner;
 
-    Request(BaseResource resource) {
+    Request(BaseResource<Request, Release> resource) {
         this.resource = resource;
         this.inner = new Event(resource.env);
         resource.putQueue.add(this);

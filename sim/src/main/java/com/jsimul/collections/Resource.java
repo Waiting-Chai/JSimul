@@ -14,27 +14,25 @@ import java.util.List;
  */
 public class Resource {
 
-    private final BaseResource core;
+    private final BaseResource<Request, Release> core;
 
     public final List<SimEvent> users = new ArrayList<>();
 
     public Resource(Environment env, int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
-        this.core = new BaseResource(
+        this.core = new BaseResource<>(
                 env,
                 capacity,
                 (event, res) -> {
-                    Request req = (Request) event;
                     if (users.size() < capacity) {
-                        users.add(req);
-                        req.asEvent().succeed(null);
+                        users.add(event);
+                        event.asEvent().succeed(null);
                     }
                     return true;
                 },
                 (event, res) -> {
-                    Release rel = (Release) event;
-                    users.remove(rel.request);
-                    rel.asEvent().succeed(null);
+                    users.remove(event.request);
+                    event.asEvent().succeed(null);
                     return true;
                 }
         );
@@ -44,7 +42,7 @@ public class Resource {
         return users.size();
     }
 
-    BaseResource core() {
+    BaseResource<Request, Release> core() {
         return core;
     }
 

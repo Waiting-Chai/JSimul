@@ -11,13 +11,13 @@ import com.jsimul.core.SimEvent;
  */
 public class Release implements SimEvent {
 
-    final BaseResource resource;
+    final BaseResource<Request, Release> resource;
 
     final Request request;
 
     private final Event inner;
 
-    Release(BaseResource resource, Request request) {
+    Release(BaseResource<Request, Release> resource, Request request) {
         this.resource = resource;
         this.request = request;
         this.inner = new Event(resource.env);

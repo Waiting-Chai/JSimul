@@ -11,11 +11,11 @@ import com.jsimul.core.SimEvent;
  */
 class Put implements SimEvent {
 
-    final BaseResource resource;
+    final BaseResource<Put, Get> resource;
 
     private final Event inner;
 
-    Put(BaseResource resource) {
+    Put(BaseResource<Put, Get> resource) {
         this.resource = resource;
         this.inner = new Event(resource.env);
         resource.putQueue.add(this);

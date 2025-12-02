@@ -10,7 +10,7 @@ import com.jsimul.core.Environment;
  */
 public class Container {
 
-    private final BaseResource<? extends PutEvent, ? extends GetEvent> core;
+    private final BaseResource<PutEvent, GetEvent> core;
 
     private double level;
 

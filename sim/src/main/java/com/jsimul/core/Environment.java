@@ -176,7 +176,7 @@ public class Environment implements BaseEnvironment {
 
     /**
      * Step through the next scheduled event (used internally or for debugging).
-     * @deprecated Prefer using run() to advance simulation.
+     * Prefer using run() to advance simulation.
      */
     @Override
     public void step() {

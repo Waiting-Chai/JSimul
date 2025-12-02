@@ -41,10 +41,8 @@ public class SimUtilExample {
         // --- Usage 1: Monitor ---
         // Periodically record the number of users currently using the server.
         // This runs every 1.0 time unit.
-        SimFunctions.monitor(env, 1.0, server::count, load -> {
-            loadHistory.add(load);
-            // LOG.info("Monitor: Current load = " + load);
-        });
+        // LOG.info("Monitor: Current load = " + load);
+        SimFunctions.monitor(env, 1.0, server::count, loadHistory::add);
 
         // --- Usage 2: Loop ---
         // Simulate a background maintenance task that runs every 5.0 time units.

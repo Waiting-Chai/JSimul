@@ -11,13 +11,13 @@ import com.jsimul.core.SimEvent;
  */
 public class GetEvent implements SimEvent {
 
-    final BaseResource resource;
+    final BaseResource<PutEvent, GetEvent> resource;
 
     final double amount;
 
     private final Event inner;
 
-    GetEvent(BaseResource resource, double amount) {
+    GetEvent(BaseResource<PutEvent, GetEvent> resource, double amount) {
         this.resource = resource;
         this.amount = amount;
         this.inner = new Event(resource.env);

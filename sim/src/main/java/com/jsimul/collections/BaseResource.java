@@ -45,11 +45,15 @@ public final class BaseResource<P extends SimEvent, G extends SimEvent> {
     }
 
     public SimEvent put() {
-        return new Put(this);
+        @SuppressWarnings("unchecked")
+        BaseResource<Put, Get> res = (BaseResource<Put, Get>) this;
+        return new Put(res);
     }
 
     public SimEvent get() {
-        return new Get(this);
+        @SuppressWarnings("unchecked")
+        BaseResource<Put, Get> res = (BaseResource<Put, Get>) this;
+        return new Get(res);
     }
 
     private boolean _doPut(P event) {
