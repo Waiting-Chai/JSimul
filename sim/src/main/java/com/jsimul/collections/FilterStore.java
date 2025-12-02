@@ -48,7 +48,7 @@ public class FilterStore {
                     }
                     StoreGet get = (StoreGet) event;
                     if (!items.isEmpty()) {
-                        Object v = items.remove(0);
+                        Object v = items.removeFirst();
                         get.asEvent().succeed(v);
                     }
                     return true;

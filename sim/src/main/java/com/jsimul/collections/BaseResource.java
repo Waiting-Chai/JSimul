@@ -5,6 +5,7 @@ import com.jsimul.core.Event;
 import com.jsimul.core.SimEvent;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -20,9 +21,9 @@ public final class BaseResource {
 
     final int capacity;
 
-    final List<SimEvent> putQueue = java.util.Collections.synchronizedList(new ArrayList<>());
+    final List<SimEvent> putQueue = Collections.synchronizedList(new ArrayList<>());
 
-    final List<SimEvent> getQueue = java.util.Collections.synchronizedList(new ArrayList<>());
+    final List<SimEvent> getQueue = Collections.synchronizedList(new ArrayList<>());
 
     private final BiFunction<SimEvent, BaseResource, Boolean> doPut;
 

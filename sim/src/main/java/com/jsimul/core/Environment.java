@@ -174,17 +174,7 @@ public class Environment implements BaseEnvironment {
             s = queue.poll();
         }
         if (s == null) throw new EmptySchedule();
-        this.now = s.time();
-
-        Event event = s.event();
-        var callbacks = event.detachCallbacks();
-        for (Event.Callback cb : callbacks) {
-            cb.call(event);
-        }
-
-        if (!event.ok() && !event.isDefused()) {
-            throw event.failureAsRuntime();
-        }
+        processEvent(s);
     }
 
     @Override
@@ -293,15 +283,7 @@ public class Environment implements BaseEnvironment {
                 }
                 
                 if (s != null) {
-                    this.now = s.time();
-                    Event event = s.event();
-                    var callbacks = event.detachCallbacks();
-                    for (Event.Callback cb : callbacks) {
-                        cb.call(event);
-                    }
-                    if (!event.ok() && !event.isDefused()) {
-                        throw event.failureAsRuntime();
-                    }
+                    processEvent(s);
                 }
                 
                 // Check untilEvent after processing one step
@@ -312,6 +294,19 @@ public class Environment implements BaseEnvironment {
             } catch ( StopSimulation e ) {
                 return e.value();
             }
+        }
+    }
+
+    //   帮我给这个方法取个名字，它的作用是处理一个事件，包括更新时间、调用回调、检查失败等
+    private void processEvent(Scheduled s) {
+        this.now = s.time();
+        Event event = s.event();
+        var callbacks = event.detachCallbacks();
+        for (Event.Callback cb : callbacks) {
+            cb.call(event);
+        }
+        if (!event.ok() && !event.isDefused()) {
+            throw event.failureAsRuntime();
         }
     }
 
