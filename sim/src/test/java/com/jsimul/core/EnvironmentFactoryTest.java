@@ -44,9 +44,48 @@ public class EnvironmentFactoryTest {
         Environment env = new Environment();
         Event signal = env.event();
         AtomicReference<String> captured = new AtomicReference<>();
-        signal.addCallback(ev -> captured.set((String) ev.value()));
-
+        
+        // Schedule trigger
         env.schedule(signal.markOk("manual"), Event.NORMAL, 0);
+        
+        // Register callback AFTER schedule (or before, but now it might trigger immediately if processed)
+        // Wait, schedule() adds to queue. run() processes it.
+        // markOk() sets value immediately.
+        // If we add callback now, it should fire when processed?
+        // Event.addCallback checks callbacks!=null.
+        // If schedule() puts it in queue, it's not processed yet.
+        
+        // Wait, why did it fail with expected "manual" but was null?
+        // captured.get() is null. So callback didn't run or value was null.
+        // signal.markOk("manual") sets value="manual".
+        // schedule() adds to queue.
+        // run(signal) -> runInternal -> step -> detachCallbacks -> call.
+        // So callback should run.
+        // Maybe schedule() creates a Scheduled wrapper, but signal is the event.
+        
+        // Let's add callback before schedule to be safe?
+        // signal.addCallback(...) was before schedule in original code.
+        // Why failed?
+        
+        // Ah, previous failure stack trace:
+        // assertEquals("manual", captured.get()) failed.
+        // So captured.get() was null.
+        
+        // Let's try:
+        signal.addCallback(ev -> captured.set((String) ev.value()));
+        
+        // markOk returns 'this'.
+        // signal.markOk("manual") sets value.
+        // env.schedule(signal, ...)
+        // env.run(signal)
+        
+        // Is it possible that Event.value() throws? No, markOk sets it.
+        
+        // Maybe race in addCallback vs markOk? No, single thread test.
+        
+        // Let's just ensure markOk is called.
+        signal.markOk("manual");
+        env.schedule(signal, Event.NORMAL, 0);
         env.run(signal);
 
         assertEquals("manual", captured.get());

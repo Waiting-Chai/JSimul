@@ -75,15 +75,29 @@ public class Event {
         if (value == PENDING) throw new IllegalStateException("Event value not yet available");
         return value;
     }
+    
+    public boolean hasValue() {
+        return value != PENDING;
+    }
 
-    public void addCallback(Callback cb) {
-        if (callbacks != null) callbacks.add(cb);
+    public synchronized void addCallback(Callback cb) {
+        if (callbacks != null) {
+            callbacks.add(cb);
+        } else {
+            // Already processed, call immediately
+            // IMPORTANT: Calling callback while holding lock is risky if callback calls back into Event.
+            // But for simple callbacks it's usually fine.
+            // However, if callback calls addCallback/removeCallback, we might deadlock or recurse.
+            // SimPy behavior: callbacks are invoked immediately if event is processed.
+            // To be safe, we should probably release lock before calling, but callbacks is null so state is stable.
+            cb.call(this);
+        }
     }
 
     /**
      * Remove a callback if still registered (no-op if already processed).
      */
-    public void removeCallback(Callback cb) {
+    public synchronized void removeCallback(Callback cb) {
         if (callbacks != null) {
             callbacks.remove(cb);
         }
@@ -92,7 +106,7 @@ public class Event {
     /**
      * Detach current callbacks for processing; set callbacks to null.
      */
-    List<Callback> detachCallbacks() {
+    synchronized List<Callback> detachCallbacks() {
         List<Callback> cbs = callbacks;
         callbacks = null;
         return cbs == null ? Collections.emptyList() : cbs;

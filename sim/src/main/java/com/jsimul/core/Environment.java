@@ -3,6 +3,7 @@ package com.jsimul.core;
 import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -26,6 +27,8 @@ public class Environment implements BaseEnvironment {
 
     private final AtomicLong eid;
 
+    private final AtomicInteger pendingAsync = new AtomicInteger(0);
+
     private Process activeProcess;
 
     public Environment() {
@@ -36,6 +39,17 @@ public class Environment implements BaseEnvironment {
         this.now = initialTime;
         this.queue = new PriorityQueue<>();
         this.eid = new AtomicLong();
+    }
+
+    public void incPending() {
+        pendingAsync.incrementAndGet();
+    }
+
+    public void decPending() {
+        pendingAsync.decrementAndGet();
+        synchronized (queueLock) {
+            queueLock.notifyAll();
+        }
     }
 
     @Override
@@ -149,6 +163,10 @@ public class Environment implements BaseEnvironment {
         }
     }
 
+    /**
+     * Step through the next scheduled event (used internally or for debugging).
+     * @deprecated Prefer using run() to advance simulation.
+     */
     @Override
     public void step() {
         Scheduled s;
@@ -208,8 +226,9 @@ public class Environment implements BaseEnvironment {
      */
     public Object run(double untilTime) {
         if (untilTime <= now) throw new IllegalArgumentException("until must be > now");
-        Event untilEvent = new Event(this).markOk(null);
-        schedule(untilEvent, Event.URGENT, untilTime - now);
+        // Use a Timeout event to ensure time advances
+        Timeout t = timeout(untilTime - now);
+        Event untilEvent = t.asEvent();
         untilEvent.addCallback(StopSimulation::callback);
         return runInternal(untilEvent);
     }
@@ -220,53 +239,84 @@ public class Environment implements BaseEnvironment {
     private Object runInternal(Event untilEvent) {
         while ( true ) {
             try {
-                step();
+                // Optimized wait logic: check conditions before blocking
+                if (untilEvent != null && untilEvent.isProcessed()) {
+                     return untilEvent.value(); // fast path exit
+                }
+                
+                Scheduled s;
+                synchronized (queueLock) {
+                    while (queue.isEmpty() || pendingAsync.get() > 0) {
+                        // If we are waiting for an event that hasn't happened, and queue is empty,
+                        // we must wait for producers (e.g. async threads) to schedule something.
+                        // If no untilEvent is set, an empty queue means simulation end.
+                        // BUT if pendingAsync > 0, we MUST wait regardless of queue state (race prevention).
+                        if (untilEvent == null && queue.isEmpty() && pendingAsync.get() == 0) {
+                             // Double check: some async producer might have just added something before we locked?
+                             // If truly empty and no untilEvent, we are done.
+                             return null; 
+                        }
+
+                        // If untilEvent is NOT null, and queue is empty, and pendingAsync is 0,
+                        // it means we are waiting for an event but nothing is scheduled and nothing is running.
+                        // This is a deadlock or "end of simulation before target reached".
+                        if (untilEvent != null && queue.isEmpty() && pendingAsync.get() == 0) {
+                            // Check if untilEvent is already processed (handled by loop condition, but safe to check)
+                            if (untilEvent.isProcessed()) return untilEvent.value();
+                            
+                            // If not processed, we are stuck. Throw EmptySchedule to indicate failure to reach target.
+                            // This matches SimPy's behavior where running until an event that never happens 
+                            // (and schedule empties) raises an exception.
+                            // However, for runUntilEventWithoutScheduleThrows test, it expects RuntimeException with message.
+                            throw new RuntimeException("No scheduled events left before until condition is met");
+                        }
+                        
+                        // If untilEvent is present but not triggered, and queue is empty,
+                        // we MUST wait for something to be scheduled (potentially by other threads).
+                        // However, to avoid infinite deadlocks if producers die, we keep a timeout or rely on user interrupt.
+                        // For this fix, we'll use a loop with wait() to avoid busy spinning.
+                        try {
+                            // Wait for schedule() to notify us
+                            queueLock.wait(100); 
+                            
+                            // Re-check exit conditions after wake-up
+                            if (untilEvent != null && untilEvent.isProcessed()) {
+                                return untilEvent.value();
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted during simulation wait", e);
+                        }
+                    }
+                    // Queue not empty, proceed to process
+                    s = queue.poll();
+                }
+                
+                if (s != null) {
+                    this.now = s.time();
+                    Event event = s.event();
+                    var callbacks = event.detachCallbacks();
+                    for (Event.Callback cb : callbacks) {
+                        cb.call(event);
+                    }
+                    if (!event.ok() && !event.isDefused()) {
+                        throw event.failureAsRuntime();
+                    }
+                }
+                
+                // Check untilEvent after processing one step
+                if (untilEvent != null && untilEvent.isProcessed()) {
+                    return untilEvent.value();
+                }
+                
             } catch ( StopSimulation e ) {
                 return e.value();
-            } catch ( EmptySchedule e ) {
-                if ( untilEvent != null && !untilEvent.triggered() && !untilEvent.isProcessed() ) {
-                    // Allow a short grace period for asynchronous producers (e.g., processes starting on virtual threads)
-                    if ( awaitNewEvents(untilEvent, 50) ) {
-                        continue;
-                    }
-                    throw new RuntimeException("No scheduled events left before until condition is met");
-                }
-                return null; // terminate when the schedule is empty
             }
         }
     }
 
     private List<Object> normalizeArgs(Object[] events) {
         return Arrays.asList(events == null ? new Object[0] : events);
-    }
-
-    /**
-     * Wait briefly for new events to appear or the untilEvent to complete.
-     * Returns true if either condition occurs within the timeout.
-     */
-    private boolean awaitNewEvents(Event untilEvent, long timeoutMillis) {
-        long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
-        while ( System.nanoTime() < deadline ) {
-            if ( untilEvent.triggered() || untilEvent.isProcessed() ) {
-                return true;
-            }
-            synchronized ( queueLock ) {
-                if ( !queue.isEmpty() ) {
-                    return true;
-                }
-                long remainingNanos = deadline - System.nanoTime();
-                if ( remainingNanos <= 0 ) {
-                    break;
-                }
-                try {
-                    queueLock.wait(Math.max(1L, remainingNanos / 1_000_000L));
-                } catch ( InterruptedException ie ) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        }
-        return untilEvent.triggered() || untilEvent.isProcessed() || !queue.isEmpty();
     }
 
 }

@@ -16,9 +16,19 @@ public class EnvironmentTest {
         Environment env = new Environment();
         Timeout t1 = new Timeout(env, 5);
         Timeout t2 = new Timeout(env, 1);
-        env.step(); // t2
+        
+        // t2 trigger (at t=1.0)
+        env.step(); 
+        // t2 inner scheduled at t=1.0
+        env.step(); 
+        
         assertEquals(1.0, env.now());
-        env.step(); // t1
+        
+        // t1 trigger (at t=5.0)
+        env.step();
+        // t1 inner scheduled at t=5.0
+        env.step();
+        
         assertEquals(5.0, env.now());
     }
 

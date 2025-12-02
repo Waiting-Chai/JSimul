@@ -23,12 +23,9 @@ public class CallbackTest {
 
         // Create a timeout with a callback
         Timeout timeout = new Timeout(env, 1, "test_value");
-        timeout.addCallback(new Event.Callback() {
-            @Override
-            public void call(Event event) {
-                callbackInvoked.set(true);
-                callbackValue.set((String) event.value());
-            }
+        timeout.asEvent().addCallback(event -> {
+            callbackInvoked.set(true);
+            callbackValue.set((String) event.value());
         });
 
         // Run the simulation
@@ -47,8 +44,8 @@ public class CallbackTest {
 
         // Create a timeout with multiple callbacks
         Timeout timeout = new Timeout(env, 1, "test");
-        timeout.addCallback(event -> callback1Invoked.set(true));
-        timeout.addCallback(event -> callback2Invoked.set(true));
+        timeout.asEvent().addCallback(event -> callback1Invoked.set(true));
+        timeout.asEvent().addCallback(event -> callback2Invoked.set(true));
 
         // Run the simulation
         env.run(timeout.asEvent());

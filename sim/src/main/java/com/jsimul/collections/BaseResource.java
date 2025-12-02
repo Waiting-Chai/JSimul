@@ -20,9 +20,9 @@ public final class BaseResource {
 
     final int capacity;
 
-    final List<SimEvent> putQueue = new ArrayList<>();
+    final List<SimEvent> putQueue = java.util.Collections.synchronizedList(new ArrayList<>());
 
-    final List<SimEvent> getQueue = new ArrayList<>();
+    final List<SimEvent> getQueue = java.util.Collections.synchronizedList(new ArrayList<>());
 
     private final BiFunction<SimEvent, BaseResource, Boolean> doPut;
 
@@ -60,34 +60,38 @@ public final class BaseResource {
     }
 
     public void triggerPut(Event getEvent) {
-        int idx = 0;
-        while (idx < putQueue.size()) {
-            SimEvent se = putQueue.get(idx);
-            Event e = se.asEvent();
-            boolean proceed = _doPut(se);
-            // Keep pending events in the queue; remove completed ones
-            if (!e.triggered()) {
-                idx++;
-            } else if (putQueue.remove(idx) != se) {
-                throw new RuntimeException("Put queue invariant violated");
+        synchronized (putQueue) {
+            int idx = 0;
+            while (idx < putQueue.size()) {
+                SimEvent se = putQueue.get(idx);
+                Event e = se.asEvent();
+                boolean proceed = _doPut(se);
+                // Keep pending events in the queue; remove completed ones
+                if (!e.triggered()) {
+                    idx++;
+                } else if (putQueue.remove(idx) != se) {
+                    throw new RuntimeException("Put queue invariant violated");
+                }
+                if (!proceed) break;
             }
-            if (!proceed) break;
         }
     }
 
     public void triggerGet(Event putEvent) {
-        int idx = 0;
-        while (idx < getQueue.size()) {
-            SimEvent se = getQueue.get(idx);
-            Event e = se.asEvent();
-            boolean proceed = _doGet(se);
-            // Keep pending events in the queue; remove completed ones
-            if (!e.triggered()) {
-                idx++;
-            } else if (getQueue.remove(idx) != se) {
-                throw new RuntimeException("Get queue invariant violated");
+        synchronized (getQueue) {
+            int idx = 0;
+            while (idx < getQueue.size()) {
+                SimEvent se = getQueue.get(idx);
+                Event e = se.asEvent();
+                boolean proceed = _doGet(se);
+                // Keep pending events in the queue; remove completed ones
+                if (!e.triggered()) {
+                    idx++;
+                } else if (getQueue.remove(idx) != se) {
+                    throw new RuntimeException("Get queue invariant violated");
+                }
+                if (!proceed) break;
             }
-            if (!proceed) break;
         }
     }
 

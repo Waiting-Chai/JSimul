@@ -114,7 +114,8 @@ public class Condition implements ConditionCarrier {
             if (nestedByEvent.containsKey(e)) {
                 continue;
             }
-            if (e.isProcessed()) {
+            // Only collect values from processed events that have values
+            if (e.hasValue()) {
                 cv.add(e);
             }
         }
@@ -124,11 +125,7 @@ public class Condition implements ConditionCarrier {
     }
 
     private void buildValue(Event event) {
-        if (event.ok()) {
-            ConditionValue cv = new ConditionValue();
-            populateValue(cv);
-            inner.markOk(cv);
-        }
+        // No-op now, handled in check()
     }
 
     private void check(Event e) {
@@ -145,7 +142,9 @@ public class Condition implements ConditionCarrier {
             return;
         }
         if (evaluate.test(events, count)) {
-            inner.succeed(null);
+            ConditionValue cv = new ConditionValue();
+            populateValue(cv);
+            inner.succeed(cv);
         }
     }
 
