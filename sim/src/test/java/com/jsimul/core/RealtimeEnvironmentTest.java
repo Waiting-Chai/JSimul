@@ -128,4 +128,83 @@ public class RealtimeEnvironmentTest {
         assertEquals("tiny", result);
         assertTrue(controller.sleepCalls > 0);
     }
+
+    @Test
+    void factorScalingRespectsInitialOffset() {
+        FakeClockSleeper controller = new FakeClockSleeper();
+        double initialTime = 10.0;
+        double factor = 2.0;
+        RealtimeEnvironment env = new RealtimeEnvironment(initialTime, factor, false, controller, controller);
+
+        Process proc =
+                env.process(
+                        ctx -> {
+                            ctx.await(env.timeout(5.0, "scaled"));
+                            return "scaled";
+                        });
+
+        Object result = env.run(proc);
+        assertEquals("scaled", result);
+        assertEquals(15.0, env.now(), 1e-9);
+        assertEquals(10.0, controller.seconds, 1e-9); // (15 - 10) * factor => 10 real seconds
+    }
+
+    @Test
+    void strictModeToleratesLagWithinFactorBudget() {
+        FakeClockSleeper controller =
+                new FakeClockSleeper() {
+                    @Override
+                    public void sleepNanos(long nanos) {
+                        super.sleepNanos(nanos);
+                        // Inject small lag that stays within the factor allowance
+                        this.seconds += 0.01;
+                    }
+                };
+        double factor = 0.05;
+        RealtimeEnvironment env = new RealtimeEnvironment(0.0, factor, true, controller, controller);
+
+        // Schedule a short timeout; target real time is 0.0025s, injected lag is 0.01s (< factor)
+        env.timeout(0.05);
+        assertDoesNotThrow(() -> env.run(null));
+        assertEquals(0.05, env.now(), 1e-9);
+    }
+
+    @Test
+    void runReturnsImmediatelyWhenUntilAlreadyProcessed() {
+        FakeClockSleeper controller = new FakeClockSleeper();
+        RealtimeEnvironment env = new RealtimeEnvironment(0.0, 1.0, true, controller, controller);
+
+        Event completed = env.event();
+        completed.markOk("done");
+        completed.detachCallbacks(); // mark processed so resolveUntil returns immediately
+
+        Object result = env.run(completed);
+        assertEquals("done", result);
+        assertEquals(0, controller.sleepCalls);
+    }
+
+    @Test
+    void runWaitsForLateSchedulingWhenQueueIsInitiallyEmpty() throws InterruptedException {
+        FakeClockSleeper controller = new FakeClockSleeper();
+        RealtimeEnvironment env = new RealtimeEnvironment(0.0, 1.0, true, controller, controller);
+
+        Event gate = env.event();
+        Thread t =
+                new Thread(
+                        () -> {
+                            try {
+                                Thread.sleep(5);
+                            } catch (InterruptedException ignored) {
+                                Thread.currentThread().interrupt();
+                            }
+                            gate.succeed("late");
+                        });
+        t.start();
+
+        Object result = env.run(gate);
+        t.join();
+
+        assertEquals("late", result);
+        assertEquals(0, controller.sleepCalls); // target time was 0, so no sleeping required
+    }
 }
